@@ -347,10 +347,49 @@ export default function Home() {
     };
   }, [expanded]);
 
+  const instagramUrl =
+    process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? "https://instagram.com";
+
   return (
     <>
       <div className="flex flex-col lg:flex-row lg:gap-8">
         <div className="order-2 lg:order-1 flex-1 min-w-0">
+          {currentPage === HOME_PAGE && (
+            <section
+              id="about"
+              className="mb-8 pb-8 border-b border-border/80"
+              aria-labelledby="about-heading"
+            >
+              <h2 id="about-heading" className="text-lg font-medium tracking-tight text-foreground mb-3">
+                About
+              </h2>
+              <p className="text-muted text-sm leading-relaxed max-w-xl">
+                Landscapes, wildlife, architecture, whatever the road turns up.
+                I like the mix of big sky and small detail, the planned stop and the turn we didn’t expect.
+              </p>
+              <p className="text-muted text-sm leading-relaxed max-w-xl mt-4">
+                I want images that hold a moment without over-explaining it. Over time, a body of work that reads like a map of where I’ve been.
+              </p>
+              <p className="text-muted text-sm leading-relaxed max-w-xl mt-4">
+                Inspired by late light, empty roads, crowded streets, and work that leaves room for the viewer. Craft and intention matter; so do accident and the shot you didn’t plan.
+              </p>
+              <p className="text-muted text-sm leading-relaxed max-w-xl mt-4">
+                Photography turns experience into something you can return to and share. It’s a way to look twice, and proof that we were here.
+                The places we went, and what stuck.
+              </p>
+              <p className="text-sm text-foreground mt-4">
+                Follow for more, or reach out{" "}
+                <a
+                  href={instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-foreground hover:text-muted underline-offset-4 hover:underline transition-colors"
+                >
+                  @the_places_we_went
+                </a>
+              </p>
+            </section>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {isLoading
           ? Array.from({ length: SKELETON_COUNT }, (_, i) => (
@@ -360,10 +399,11 @@ export default function Home() {
                 aria-hidden
               />
             ))
-          : images.map((image) => {
+          : images.map((image, index) => {
           const width = image.dimensions?.width ?? 800;
           const height = image.dimensions?.height ?? 600;
           const alt = image.dimensions?.baseName ?? image.name;
+          const isAboveFold = index < 6;
 
           return (
             <button
@@ -377,9 +417,11 @@ export default function Home() {
                 alt={alt}
                 width={width}
                 height={height}
-                title={`${image.name} (${(image.size / 1024).toFixed(1)} KB) — Click to expand`}
+                title={`${image.name} (${(image.size / 1024).toFixed(1)} KB). Click to expand`}
                 className="w-full h-auto object-cover cursor-pointer"
                 sizes="(max-width: 640px) 50vw, 33vw"
+                {...(isAboveFold ? { priority: true } : { loading: "lazy" })}
+                unoptimized
               />
             </button>
           );
@@ -387,7 +429,7 @@ export default function Home() {
           </div>
         </div>
         <aside
-          className="hidden lg:block lg:shrink-0 lg:w-48 sticky lg:top-8"
+          className="hidden lg:block lg:shrink-0 lg:w-48 lg:sticky lg:top-24 lg:self-start"
           aria-label="Galleries"
         >
           <GalleryList
@@ -438,6 +480,8 @@ export default function Home() {
                   expandedImageLoaded ? "opacity-100" : "opacity-0"
                 }`}
                 sizes="100vw"
+                loading="lazy"
+                unoptimized
                 onLoad={() => setExpandedImageLoaded(true)}
               />
               <div className="absolute bottom-0 right-0 translate-y-full flex gap-2 pt-2 touch-manual">
