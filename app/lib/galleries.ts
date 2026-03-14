@@ -1,3 +1,4 @@
+/** Home route shows all images from storage root (primary feed). */
 export const HOME_PAGE = "__all__";
 
 export function pathForGallery(gallery: string): string {

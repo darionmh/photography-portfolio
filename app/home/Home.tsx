@@ -460,7 +460,7 @@ export default function Home() {
             }}
           >
             <div
-              className="relative flex items-center justify-center min-w-[120px] min-h-[120px] max-h-[min(88vh,88dvh)]"
+              className="relative flex items-center justify-center min-w-[120px] min-h-[120px] max-h-[min(80vh,80dvh)]"
               onClick={(e) => e.stopPropagation()}
             >
               {!expandedImageLoaded && (
@@ -476,7 +476,7 @@ export default function Home() {
                 alt={expanded.dimensions?.baseName ?? expanded.name}
                 width={expanded.dimensions?.width ?? 1920}
                 height={expanded.dimensions?.height ?? 1080}
-                className={`max-w-full max-h-[min(88vh,88dvh)] w-auto h-auto object-contain transition-opacity duration-200 ${
+                className={`max-w-full max-h-[min(80vh,80dvh)] w-auto h-auto object-contain transition-opacity duration-200 ${
                   expandedImageLoaded ? "opacity-100" : "opacity-0"
                 }`}
                 sizes="100vw"
@@ -484,7 +484,7 @@ export default function Home() {
                 unoptimized
                 onLoad={() => setExpandedImageLoaded(true)}
               />
-              <div className="absolute bottom-0 right-0 translate-y-full flex gap-2 pt-2 touch-manual">
+              <div className="absolute bottom-0 right-0 translate-y-full flex gap-5 px-4 pt-4 pb-2 touch-manual">
                 <button
                   type="button"
                   onClick={handleDownload}
