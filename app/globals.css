@@ -1,26 +1,69 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Light: warm paper / stone */
+  --background: #fafaf9;
+  --foreground: #292524;
+  --muted: #78716c;
+  --border: #e7e5e4;
+  --surface: #f5f5f4;
+
+  /* Max container widths */
+  --container-sm: 640px;
+  --container-md: 768px;
+  --container-lg: 1024px;
+  --container-xl: 1280px;
+  --container-2xl: 1536px;
+  --container-padding: 1rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-surface: var(--surface);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Dark theme: applied when .dark is on <html> (e.g. via footer toggle) */
+.dark {
+  --background: #1c1917;
+  --foreground: #fafaf9;
+  --muted: #a8a29e;
+  --border: #44403c;
+  --surface: #292524;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Container: centered, max-width, horizontal padding */
+.container {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: var(--container-padding);
+  max-width: var(--container-xl);
+}
+
+.container-sm {
+  max-width: var(--container-sm);
+}
+.container-md {
+  max-width: var(--container-md);
+}
+.container-lg {
+  max-width: var(--container-lg);
+}
+.container-xl {
+  max-width: var(--container-xl);
+}
+.container-2xl {
+  max-width: var(--container-2xl);
 }
