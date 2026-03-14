@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useGalleries } from "../contexts/GalleriesContext";
 import { HOME_PAGE, pathForGallery, formatGalleryName } from "../lib/galleries";
+import { getRecaptchaToken, isRecaptchaEnabled } from "../lib/recaptcha";
 import { getImagesFromStorage, type StorageImage } from "../lib/storage";
 
 const SKELETON_COUNT = 6;
@@ -227,18 +228,52 @@ export default function Home() {
 
     setIsLoading(true);
     setImages([]);
-    getImagesFromStorage(path).then(
-      (data) => {
-        if (currentPathRef.current !== path) return;
-        setCachedImages(path, data);
-        setImages(data);
-        setIsLoading(false);
-      },
-      () => {
-        if (currentPathRef.current !== path) return;
-        setIsLoading(false);
-      }
-    );
+
+    if (isRecaptchaEnabled()) {
+      getRecaptchaToken()
+        .then((token) => {
+          if (!token) {
+            if (currentPathRef.current === path) setIsLoading(false);
+            return null;
+          }
+          return fetch("/api/images", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token, path }),
+          });
+        })
+        .then((res) => {
+          if (!res || currentPathRef.current !== path) return;
+          if (!res.ok) {
+            setIsLoading(false);
+            return;
+          }
+          return res.json();
+        })
+        .then((data) => {
+          if (currentPathRef.current !== path) return;
+          const dataList = Array.isArray(data?.images) ? data.images : [];
+          setCachedImages(path, dataList as StorageImage[]);
+          setImages(dataList as StorageImage[]);
+          setIsLoading(false);
+        })
+        .catch(() => {
+          if (currentPathRef.current === path) setIsLoading(false);
+        });
+    } else {
+      getImagesFromStorage(path).then(
+        (data) => {
+          if (currentPathRef.current !== path) return;
+          setCachedImages(path, data);
+          setImages(data);
+          setIsLoading(false);
+        },
+        () => {
+          if (currentPathRef.current !== path) return;
+          setIsLoading(false);
+        }
+      );
+    }
   }, [currentPage, getCachedImages, setCachedImages]);
 
   // Deep link: sync lightbox with URL (resource id in param)

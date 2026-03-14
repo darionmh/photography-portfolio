@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isRecaptchaEnabled } from "../lib/recaptcha";
 
 const THEME_KEY = "theme";
 
 export default function Footer() {
   const [dark, setDark] = useState(false);
+  const [showRecaptchaNotice, setShowRecaptchaNotice] = useState(false);
 
   useEffect(() => {
     setDark(document.documentElement.classList.contains("dark"));
+    setShowRecaptchaNotice(isRecaptchaEnabled());
   }, []);
 
   const toggle = () => {
@@ -29,10 +32,11 @@ export default function Footer() {
 
   return (
     <footer className="border-t border-border mt-auto py-6">
-      <div className="container flex items-center justify-between gap-4">
-        <span className="text-sm text-muted">
-          the places we went
-        </span>
+      <div className="container flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-sm text-muted">
+            the places we went
+          </span>
         <div className="flex items-center gap-2">
           <a
             href={instagramUrl}
@@ -106,6 +110,30 @@ export default function Footer() {
           )}
           </button>
         </div>
+        </div>
+        {showRecaptchaNotice && (
+          <p className="text-xs text-muted">
+            This site is protected by reCAPTCHA and the Google{" "}
+            <a
+              href="https://policies.google.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              Privacy Policy
+            </a>{" "}
+            and{" "}
+            <a
+              href="https://policies.google.com/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              Terms of Service
+            </a>{" "}
+            apply.
+          </p>
+        )}
       </div>
     </footer>
   );
