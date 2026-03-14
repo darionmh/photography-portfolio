@@ -410,7 +410,8 @@ export default function Home() {
               key={image.fullPath}
               type="button"
               onClick={() => openExpanded(image)}
-              className="block w-full text-left overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted"
+              onContextMenu={(e) => e.preventDefault()}
+              className="block w-full text-left overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted select-none"
             >
               <Image
                 src={image.url}
@@ -418,8 +419,9 @@ export default function Home() {
                 width={width}
                 height={height}
                 title={`${image.name} (${(image.size / 1024).toFixed(1)} KB). Click to expand`}
-                className="w-full h-auto object-cover cursor-pointer"
+                className="w-full h-auto object-cover cursor-pointer pointer-events-none"
                 sizes="(max-width: 640px) 50vw, 33vw"
+                draggable={false}
                 {...(isAboveFold ? { priority: true } : { loading: "lazy" })}
                 unoptimized
               />
@@ -460,8 +462,9 @@ export default function Home() {
             }}
           >
             <div
-              className="relative flex items-center justify-center min-w-[120px] min-h-[120px] max-h-[min(80vh,80dvh)]"
+              className="relative flex items-center justify-center min-w-[120px] min-h-[120px] max-h-[min(80vh,80dvh)] select-none"
               onClick={(e) => e.stopPropagation()}
+              onContextMenu={(e) => e.preventDefault()}
             >
               {!expandedImageLoaded && (
                 <div
@@ -476,11 +479,12 @@ export default function Home() {
                 alt={expanded.dimensions?.baseName ?? expanded.name}
                 width={expanded.dimensions?.width ?? 1920}
                 height={expanded.dimensions?.height ?? 1080}
-                className={`max-w-full max-h-[min(80vh,80dvh)] w-auto h-auto object-contain transition-opacity duration-200 ${
+                className={`max-w-full max-h-[min(80vh,80dvh)] w-auto h-auto object-contain transition-opacity duration-200 [-webkit-user-drag:none] [user-drag:none] ${
                   expandedImageLoaded ? "opacity-100" : "opacity-0"
                 }`}
                 sizes="100vw"
                 loading="lazy"
+                draggable={false}
                 unoptimized
                 onLoad={() => setExpandedImageLoaded(true)}
               />
