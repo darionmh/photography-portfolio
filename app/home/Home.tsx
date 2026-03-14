@@ -90,7 +90,7 @@ function GalleryList({
               Home
             </button>
             <span className="shrink-0 self-center text-xs font-semibold uppercase tracking-wider text-muted">
-              Gallery
+              Galleries
             </span>
             {showSkeletons
               ? Array.from({ length: GALLERY_SKELETON_COUNT }, (_, i) => (
@@ -151,7 +151,7 @@ function GalleryList({
         Home
       </button>
       <h2 className="px-4 pt-2 pb-0.5 text-xs font-semibold uppercase tracking-wider text-muted">
-        Gallery
+        Galleries
       </h2>
       {showSkeletons
         ? Array.from({ length: GALLERY_SKELETON_COUNT }, (_, i) => (
