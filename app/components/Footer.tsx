@@ -38,7 +38,7 @@ export default function Footer() {
             href={instagramUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 rounded-md text-muted hover:text-foreground hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted transition-colors"
+            className="p-2 rounded-md text-muted hover:text-foreground hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted transition-colors cursor-pointer"
             aria-label="Instagram"
           >
             <svg
@@ -61,7 +61,7 @@ export default function Footer() {
           <button
             type="button"
             onClick={toggle}
-          className="p-2 rounded-md text-muted hover:text-foreground hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted transition-colors"
+          className="p-2 rounded-md text-muted hover:text-foreground hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted transition-colors cursor-pointer"
           aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
           title={dark ? "Light mode" : "Dark mode"}
         >

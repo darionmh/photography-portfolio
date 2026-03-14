@@ -65,7 +65,7 @@ function GalleryList({
   const showSkeletons = galleriesLoading && galleries.length === 0;
 
   const baseTouch =
-    "min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted transition-colors font-medium text-sm";
+    "min-h-[44px] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted transition-colors font-medium text-sm";
   const activeClass = "underline underline-offset-4 decoration-2 text-foreground";
   const inactiveClass =
     "text-muted hover:text-foreground/80";
@@ -383,7 +383,7 @@ export default function Home() {
                   href={instagramUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-foreground hover:text-muted underline-offset-4 hover:underline transition-colors"
+                  className="font-medium text-foreground hover:text-muted underline-offset-4 hover:underline transition-colors cursor-pointer"
                 >
                   @the_places_we_went
                 </a>
@@ -410,7 +410,7 @@ export default function Home() {
               key={image.fullPath}
               type="button"
               onClick={() => openExpanded(image)}
-              className="block w-full text-left overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted"
+              className="block w-full text-left overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted"
             >
               <Image
                 src={image.url}
@@ -488,7 +488,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={handleDownload}
-                  className="flex items-center justify-center w-9 h-9 rounded-full text-background/90 bg-background/10 hover:bg-background/20 active:bg-background/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-background"
+                  className="flex items-center justify-center w-9 h-9 rounded-full text-background/90 bg-background/10 hover:bg-background/20 active:bg-background/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-background cursor-pointer"
                   aria-label="Download"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -500,7 +500,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="flex items-center justify-center w-9 h-9 rounded-full text-background/90 bg-background/10 hover:bg-background/20 active:bg-background/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-background"
+                  className="flex items-center justify-center w-9 h-9 rounded-full text-background/90 bg-background/10 hover:bg-background/20 active:bg-background/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-background cursor-pointer"
                   aria-label="Share"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -515,7 +515,7 @@ export default function Home() {
           <button
             type="button"
             onClick={closeExpanded}
-            className="absolute z-10 flex items-center justify-center min-w-[44px] min-h-[44px] p-2 text-background/90 hover:bg-background/10 hover:text-background active:bg-background/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-background rounded-full touch-manual"
+            className="absolute z-10 flex items-center justify-center min-w-[44px] min-h-[44px] p-2 text-background/90 hover:bg-background/10 hover:text-background active:bg-background/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-background rounded-full touch-manual cursor-pointer"
             style={{
               top: "max(0.75rem, env(safe-area-inset-top))",
               right: "max(0.75rem, env(safe-area-inset-right))",

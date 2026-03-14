@@ -51,7 +51,7 @@ export default function Header() {
           <div className="flex items-center gap-5 sm:gap-6 lg:hidden" ref={dropdownRef}>
             <Link
               href="/"
-              className="text-sm tracking-wide text-muted hover:text-foreground underline-offset-4 hover:underline transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-offset-2 rounded-sm"
+              className="text-sm tracking-wide text-muted hover:text-foreground underline-offset-4 hover:underline transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-offset-2 rounded-sm cursor-pointer"
             >
               Home
             </Link>
@@ -97,7 +97,7 @@ export default function Header() {
                           onClick={() => setGalleriesOpen(false)}
                           role="option"
                           aria-selected={isActive}
-                          className={`block w-full text-left px-4 py-2.5 text-sm tracking-wide focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-inset rounded-lg mx-1 transition-colors duration-150 ${
+                          className={`block w-full text-left px-4 py-2.5 text-sm tracking-wide cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-inset rounded-lg mx-1 transition-colors duration-150 ${
                             isActive
                               ? "text-foreground font-medium bg-surface/60"
                               : "text-muted hover:text-foreground hover:bg-surface/40"
@@ -116,7 +116,7 @@ export default function Header() {
             href={instagramUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-muted hover:text-foreground transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-offset-2 shrink-0 p-1 rounded-sm"
+            className="text-muted hover:text-foreground transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-offset-2 shrink-0 p-1 rounded-sm cursor-pointer"
             aria-label="Instagram"
           >
             <svg
