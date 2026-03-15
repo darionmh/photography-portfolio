@@ -32,6 +32,7 @@ export default function Footer() {
   const instagramUrl =
     process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? "https://instagram.com";
   const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
+  const buyMeACoffeeUrl = process.env.NEXT_PUBLIC_BUYMEACOFFEE_URL;
   const copyrightName = process.env.NEXT_PUBLIC_COPYRIGHT_NAME;
   const year = new Date().getFullYear();
 
@@ -40,11 +41,20 @@ export default function Footer() {
       <div className="container flex flex-col gap-3">
         <div className="flex items-center justify-between gap-4">
           <span className="text-sm text-muted">
-            © {year}
-            {copyrightName ? ` ${copyrightName}. ` : " "}
-            the places we went
+            © {year} the places we went
           </span>
         <div className="flex items-center gap-2">
+          {buyMeACoffeeUrl && (
+            <a
+              href={buyMeACoffeeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => track("buymeacoffee_clicked", { location: "footer" })}
+              className="text-sm text-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted rounded-sm px-2 py-1 transition-colors cursor-pointer lowercase"
+            >
+              support
+            </a>
+          )}
           <a
             href={instagramUrl}
             target="_blank"

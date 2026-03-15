@@ -425,6 +425,7 @@ export default function Home() {
 
   const instagramUrl =
     process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? "https://instagram.com";
+  const buyMeACoffeeUrl = process.env.NEXT_PUBLIC_BUYMEACOFFEE_URL;
 
   return (
     <>
@@ -458,6 +459,23 @@ export default function Home() {
                 >
                   @the_places_we_went
                 </a>
+                {buyMeACoffeeUrl && (
+                  <>
+                    {" "}
+                    — or{" "}
+                    <a
+                      href={buyMeACoffeeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => track("buymeacoffee_clicked", { location: "about" })}
+                      className="font-medium text-foreground hover:text-muted underline-offset-4 hover:underline transition-colors cursor-pointer"
+                    >
+                      buy me a coffee
+                    </a>
+                    {" "}
+                    if you’d like to support the work.
+                  </>
+                )}
               </p>
             </section>
           )}

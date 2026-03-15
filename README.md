@@ -62,6 +62,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` | No | Firebase Analytics measurement ID (optional). |
 | `NEXT_PUBLIC_COPYRIGHT_NAME` | No | Name in footer copyright line (e.g. `Darion Higgins`). |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | No | If set, shows a “contact” mailto link in the footer. |
+| `NEXT_PUBLIC_BUYMEACOFFEE_URL` | No | If set, shows a “support” link in the footer and “buy me a coffee” in the about section. |
 | `NEXT_PUBLIC_SITE_URL` | No | Canonical URL for Open Graph (e.g. `https://theplaceswewent.com`). |
 
 **Optional – reCAPTCHA (bot protection)**
