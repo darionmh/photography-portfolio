@@ -12,6 +12,21 @@ import { getImagesFromStorage, type StorageImage } from "../lib/storage";
 const SKELETON_COUNT = 6;
 const IMAGE_PARAM = "image";
 
+/** Max width for gallery thumbnails; Next.js will serve at or below this. */
+const GALLERY_MAX_WIDTH = 640;
+/** Max width for expanded/lightbox view. */
+const EXPANDED_MAX_WIDTH = 1600;
+
+function capDimensions(
+  width: number,
+  height: number,
+  maxWidth: number
+): { width: number; height: number } {
+  if (width <= maxWidth) return { width, height };
+  const scale = maxWidth / width;
+  return { width: maxWidth, height: Math.round(height * scale) };
+}
+
 /** Encode storage fullPath to a URL-safe resource id for deep linking. */
 function toResourceId(fullPath: string): string {
   const base64 = btoa(unescape(encodeURIComponent(fullPath)));
@@ -536,8 +551,9 @@ export default function Home() {
               </p>
             )
           : images.map((image, index) => {
-          const width = image.dimensions?.width ?? 800;
-          const height = image.dimensions?.height ?? 600;
+          const intrinsicW = image.dimensions?.width ?? 800;
+          const intrinsicH = image.dimensions?.height ?? 600;
+          const { width, height } = capDimensions(intrinsicW, intrinsicH, GALLERY_MAX_WIDTH);
           const baseName = image.dimensions?.baseName ?? image.name;
           const galleryContext =
             currentPage === HOME_PAGE ? "the places we went" : formatGalleryName(currentPage);
@@ -568,7 +584,6 @@ export default function Home() {
                 sizes="(max-width: 640px) 50vw, 33vw"
                 draggable={false}
                 {...(isAboveFold ? { priority: true } : { loading: "lazy" })}
-                unoptimized
               />
               {hasStats && (
                 <span
@@ -632,15 +647,22 @@ export default function Home() {
                 alt={`${expanded.dimensions?.baseName ?? expanded.name} — ${
                   currentPage === HOME_PAGE ? "the places we went" : formatGalleryName(currentPage)
                 }`}
-                width={expanded.dimensions?.width ?? 1920}
-                height={expanded.dimensions?.height ?? 1080}
+                width={capDimensions(
+                  expanded.dimensions?.width ?? 1920,
+                  expanded.dimensions?.height ?? 1080,
+                  EXPANDED_MAX_WIDTH
+                ).width}
+                height={capDimensions(
+                  expanded.dimensions?.width ?? 1920,
+                  expanded.dimensions?.height ?? 1080,
+                  EXPANDED_MAX_WIDTH
+                ).height}
                 className={`max-w-full max-h-[min(80vh,80dvh)] w-auto h-auto object-contain transition-opacity duration-200 [-webkit-user-drag:none] [user-drag:none] ${
                   expandedImageLoaded ? "opacity-100" : "opacity-0"
                 }`}
                 sizes="100vw"
                 loading="lazy"
                 draggable={false}
-                unoptimized
                 onLoad={() => setExpandedImageLoaded(true)}
               />
               <div className="absolute bottom-0 right-0 translate-y-full flex items-center gap-5 px-4 pt-4 pb-2 touch-manual">
