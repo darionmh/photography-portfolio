@@ -28,7 +28,9 @@ export interface StorageImageServer {
   dimensions: ParsedDimensions | null;
 }
 
-function getBucket() {
+const IMAGE_STATS_COLLECTION = "imageStats";
+
+function ensureAdmin() {
   if (!admin.apps.length) {
     const cred = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
     if (cred) {
@@ -43,9 +45,21 @@ function getBucket() {
       admin.initializeApp({ credential: admin.credential.applicationDefault() });
     }
   }
+}
+
+function getBucket() {
+  ensureAdmin();
   const bucketName = process.env.FIREBASE_STORAGE_BUCKET || "photogallery-62b63.firebasestorage.app";
   return admin.storage().bucket(bucketName);
 }
+
+/** Firestore instance for image stats. Requires Firebase Admin init (e.g. FIREBASE_SERVICE_ACCOUNT_JSON). */
+export function getFirestore() {
+  ensureAdmin();
+  return admin.firestore();
+}
+
+export { IMAGE_STATS_COLLECTION };
 
 function parseDimensions(name: string): ParsedDimensions | null {
   const match = name.match(DIMENSIONS_REGEX);

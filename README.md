@@ -76,6 +76,10 @@ cp .env.example .env.local
 
 When reCAPTCHA keys are set, gallery list and image data are served via API routes after token verification; otherwise the app talks to Firebase Storage directly from the client.
 
+**Optional – Download/share counts**
+
+Per-image download and share counts are stored in Firestore. Enable **Cloud Firestore** in your Firebase project and set `FIREBASE_SERVICE_ACCOUNT_JSON` (same as for reCAPTCHA). The `imageStats` collection is created automatically. Without this, counts will not persist.
+
 ### 4. Run locally
 
 ```bash
@@ -97,8 +101,9 @@ Open [http://localhost:3000](http://localhost:3000). You should see the home fee
 
 ```
 app/
-  api/              # Optional: used when reCAPTCHA is on
+  api/              # Optional: used when reCAPTCHA is on; image-stats uses Firestore
     galleries/      # POST: verify token, return folder names
+    image-stats/    # GET: download/share counts; POST: increment on download/share
     images/         # POST: verify token, return images (signed URLs)
   components/      # Header, Footer, ThemeScript
   contexts/        # GalleriesContext (list + image cache)

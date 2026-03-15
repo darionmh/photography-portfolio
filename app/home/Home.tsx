@@ -198,6 +198,7 @@ export default function Home() {
   } = useGalleries();
   const [images, setImages] = useState<StorageImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [imageStats, setImageStats] = useState<Record<string, { downloads: number; shares: number }>>({});
   const [expanded, setExpanded] = useState<StorageImage | null>(null);
   const [expandedImageLoaded, setExpandedImageLoaded] = useState(false);
   const userClosedRef = useRef(false);
@@ -279,6 +280,23 @@ export default function Home() {
     }
   }, [currentPage, getCachedImages, setCachedImages]);
 
+  // Fetch download/share counts when images change
+  useEffect(() => {
+    if (images.length === 0) {
+      setImageStats({});
+      return;
+    }
+    const ids = images.map((img) => toResourceId(img.fullPath)).join(",");
+    fetch(`/api/image-stats?ids=${encodeURIComponent(ids)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.stats && typeof data.stats === "object") {
+          setImageStats(data.stats);
+        }
+      })
+      .catch(() => {});
+  }, [images]);
+
   // Deep link: sync lightbox with URL (resource id in param)
   useEffect(() => {
     if (!imageParam) {
@@ -331,11 +349,33 @@ export default function Home() {
     if (trigger?.focus) setTimeout(() => trigger.focus(), 0);
   }, [router, pathname]);
 
+  const recordImageAction = useCallback(
+    (resourceId: string, action: "download" | "share") => {
+      fetch("/api/image-stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resourceId, action }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (typeof data?.downloads === "number" && typeof data?.shares === "number") {
+            setImageStats((prev) => ({
+              ...prev,
+              [resourceId]: { downloads: data.downloads, shares: data.shares },
+            }));
+          }
+        })
+        .catch(() => {});
+    },
+    []
+  );
+
   const handleDownload = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
       if (!expanded) return;
       track("image_downloaded", { gallery: currentPage || "home" });
+      recordImageAction(toResourceId(expanded.fullPath), "download");
       const filename = expanded.name || "image";
       fetch(expanded.url, { mode: "cors" })
         .then((res) => res.blob())
@@ -351,7 +391,7 @@ export default function Home() {
           window.open(expanded.url, "_blank", "noopener,noreferrer");
         });
     },
-    [expanded, currentPage]
+    [expanded, currentPage, recordImageAction]
   );
 
   const handleShare = useCallback(
@@ -359,6 +399,7 @@ export default function Home() {
       e.stopPropagation();
       if (!expanded) return;
       track("image_shared", { gallery: currentPage || "home" });
+      recordImageAction(toResourceId(expanded.fullPath), "share");
       const shareUrl = typeof window !== "undefined" ? window.location.href : "";
       const title = expanded.dimensions?.baseName ?? expanded.name;
       if (typeof navigator !== "undefined" && navigator.share) {
@@ -372,7 +413,7 @@ export default function Home() {
         navigator.clipboard?.writeText(shareUrl).catch(() => {});
       }
     },
-    [expanded, currentPage]
+    [expanded, currentPage, recordImageAction]
   );
 
   useEffect(() => {
@@ -503,13 +544,19 @@ export default function Home() {
           const alt = `${baseName} — ${galleryContext}`;
           const isAboveFold = index < 6;
 
+          const rid = toResourceId(image.fullPath);
+          const stats = imageStats[rid];
+          const d = stats?.downloads ?? 0;
+          const s = stats?.shares ?? 0;
+          const hasStats = d > 0 || s > 0;
+
           return (
             <button
               key={image.fullPath}
               type="button"
               onClick={(e) => openExpanded(image, e.currentTarget)}
               onContextMenu={(e) => e.preventDefault()}
-              className="block w-full text-left overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted select-none"
+              className="block w-full text-left overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted select-none relative"
             >
               <Image
                 src={image.url}
@@ -523,6 +570,14 @@ export default function Home() {
                 {...(isAboveFold ? { priority: true } : { loading: "lazy" })}
                 unoptimized
               />
+              {hasStats && (
+                <span
+                  className="absolute bottom-1 left-1 right-1 text-[10px] text-white/90 bg-black/40 px-1.5 py-0.5 rounded lowercase"
+                  aria-label={`${d} downloads, ${s} shares`}
+                >
+                  {d} ↓ · {s} ↗
+                </span>
+              )}
             </button>
           );
             })}
@@ -588,7 +643,18 @@ export default function Home() {
                 unoptimized
                 onLoad={() => setExpandedImageLoaded(true)}
               />
-              <div className="absolute bottom-0 right-0 translate-y-full flex gap-5 px-4 pt-4 pb-2 touch-manual">
+              <div className="absolute bottom-0 right-0 translate-y-full flex items-center gap-5 px-4 pt-4 pb-2 touch-manual">
+                {(() => {
+                  const rid = toResourceId(expanded.fullPath);
+                  const st = imageStats[rid];
+                  const dc = st?.downloads ?? 0;
+                  const sc = st?.shares ?? 0;
+                  return (
+                    <span className="text-xs text-background/70 lowercase" aria-label={`${dc} downloads, ${sc} shares`}>
+                      {dc} ↓ · {sc} ↗
+                    </span>
+                  );
+                })()}
                 <button
                   type="button"
                   onClick={handleDownload}
