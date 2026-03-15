@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
     default: "The Places We Went | Photography by Darion",
-    template: "%s | The Places We Went",
+    template: "%s",
   },
   description: "Photography by Darion. Landscapes, wildlife, architecture — the places we went, and what stuck.",
   keywords: ["photography", "Darion", "landscapes", "wildlife", "architecture", "photo gallery", "the places we went"],
