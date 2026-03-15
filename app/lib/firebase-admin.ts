@@ -46,10 +46,17 @@ function ensureAdmin() {
   }
 }
 
-function getBucket() {
+/** Storage bucket for uploads and listing. Requires Firebase Admin init. */
+export function getBucket() {
   ensureAdmin();
   const bucketName = process.env.FIREBASE_STORAGE_BUCKET || "photogallery-62b63.firebasestorage.app";
   return admin.storage().bucket(bucketName);
+}
+
+/** Auth instance for verifying ID tokens (e.g. admin APIs). Requires Firebase Admin init. */
+export function getAdminAuth() {
+  ensureAdmin();
+  return admin.auth();
 }
 
 /** Firestore instance for image stats. Requires Firebase Admin init (e.g. FIREBASE_SERVICE_ACCOUNT_JSON). */
@@ -135,4 +142,92 @@ export async function getImagesInPath(path: string = ""): Promise<StorageImageSe
   );
   results.sort((a, b) => (b.timeCreated || "").localeCompare(a.timeCreated || ""));
   return results;
+}
+
+/** Segment can contain spaces and common filename chars; no path traversal, no control chars, no \ or /. */
+const PATH_SEGMENT_REGEX = /^[^\x00-\x1f\/\\]+$/;
+
+/** Sanitize storage path: no "..", no empty segments. Returns empty string if invalid. */
+export function sanitizeStoragePath(raw: string): string {
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed) return "";
+  const segments = trimmed.split("/").filter(Boolean);
+  if (segments.length === 0) return "";
+  if (segments.some((s) => s === ".." || !PATH_SEGMENT_REGEX.test(s))) return "";
+  return segments.join("/");
+}
+
+/** Delete a single file by full storage path. Path must be sanitized. */
+export async function deleteFile(fullPath: string): Promise<void> {
+  const path = sanitizeStoragePath(fullPath);
+  if (!path) throw new Error("Invalid path");
+  const bucket = getBucket();
+  await bucket.file(path).delete();
+}
+
+const FILENAME_REGEX = /^[a-zA-Z0-9_.-]+$/;
+
+/** Sanitize a filename (no path, no slashes). Returns empty string if invalid. */
+export function sanitizeFilename(raw: string): string {
+  const name = (raw ?? "").trim();
+  if (!name || name.includes("/") || name.includes("..")) return "";
+  return FILENAME_REGEX.test(name) ? name : name.replace(/[^a-zA-Z0-9_.-]/g, "_");
+}
+
+/** Rename a single file: copy to new path, delete original. toName is filename only (same folder). */
+export async function renameFile(fromPath: string, toName: string): Promise<string> {
+  const from = sanitizeStoragePath(fromPath);
+  if (!from) throw new Error("Invalid path");
+  const name = sanitizeFilename(toName);
+  if (!name) throw new Error("Invalid filename");
+  const lastSlash = from.lastIndexOf("/");
+  const dir = lastSlash >= 0 ? from.slice(0, lastSlash) : "";
+  const toPath = dir ? `${dir}/${name}` : name;
+  if (from === toPath) throw new Error("Same path");
+  const bucket = getBucket();
+  const src = bucket.file(from);
+  const dest = bucket.file(toPath);
+  await src.copy(dest);
+  await src.delete();
+  return toPath;
+}
+
+/** Rename (move) a folder: copy all files to new path, then delete originals. */
+export async function renameFolder(from: string, to: string): Promise<number> {
+  const fromPath = sanitizeStoragePath(from);
+  const toPath = sanitizeStoragePath(to);
+  if (!fromPath || !toPath) throw new Error("Invalid folder path");
+  if (fromPath === toPath) throw new Error("Source and destination are the same");
+  const bucket = getBucket();
+  const prefix = fromPath.endsWith("/") ? fromPath : `${fromPath}/`;
+  const [files] = await bucket.getFiles({ prefix });
+  const toPrefix = toPath.endsWith("/") ? toPath : `${toPath}/`;
+  let count = 0;
+  for (const file of files) {
+    if (!file.name.startsWith(prefix) || file.name === prefix) continue;
+    const relative = file.name.slice(prefix.length);
+    if (!relative || relative.includes("..")) continue;
+    const destPath = toPrefix + relative;
+    const dest = bucket.file(destPath);
+    await file.copy(dest);
+    await file.delete();
+    count++;
+  }
+  return count;
+}
+
+/** Delete a folder and all files under it. Returns number of files deleted. */
+export async function deleteFolder(path: string): Promise<number> {
+  const safe = sanitizeStoragePath(path);
+  if (!safe) throw new Error("Invalid path");
+  const bucket = getBucket();
+  const prefix = safe.endsWith("/") ? safe : `${safe}/`;
+  const [files] = await bucket.getFiles({ prefix });
+  let count = 0;
+  for (const file of files) {
+    if (!file.name.startsWith(prefix) || file.name === prefix) continue;
+    await file.delete();
+    count++;
+  }
+  return count;
 }

@@ -11,6 +11,7 @@ A photography portfolio built with Next.js and Firebase Storage. Galleries are l
 - **Theme** – Light (default) or dark mode, persisted in `localStorage`.
 - **Responsive** – Mobile: horizontal gallery pills + dropdown; desktop: sticky sidebar.
 - **reCAPTCHA v3** (optional) – Gate gallery/image data behind verification to reduce scraping.
+- **Admin** – Protected `/admin` area: Firebase Auth sign-in, upload images to Storage, list galleries. Any logged-in user has admin rights.
 - **Analytics** – Vercel Analytics and Speed Insights; custom events for lightbox, gallery selection, theme, contact, etc.
 
 ## Tech stack
@@ -71,10 +72,14 @@ cp .env.example .env.local
 |----------|----------|-------------|
 | `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | If using reCAPTCHA | From [Google reCAPTCHA Admin](https://www.google.com/recaptcha/admin) (v3). |
 | `RECAPTCHA_SECRET_KEY` | If using reCAPTCHA | Secret key for server-side verification. |
-| `FIREBASE_SERVICE_ACCOUNT_JSON` | If using reCAPTCHA | Full JSON string of your Firebase service account key. |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | If using reCAPTCHA or admin | Full JSON string of your Firebase service account key. |
 | `FIREBASE_STORAGE_BUCKET` | No | Bucket name (e.g. `myapp.firebasestorage.app`) if different from client config. |
 
 When reCAPTCHA keys are set, gallery list and image data are served via API routes after token verification; otherwise the app talks to Firebase Storage directly from the client.
+
+**Admin (image uploads)**
+
+Enable **Firebase Authentication → Sign-in method → Email/Password** in the Firebase Console. Create a user (e.g. Console → Authentication → Users → Add user) or sign up from the `/admin` login page. Any authenticated user can use the admin APIs (list galleries, upload images).
 
 **Optional – Download/share counts**
 
@@ -101,14 +106,18 @@ Open [http://localhost:3000](http://localhost:3000). You should see the home fee
 
 ```
 app/
+  admin/            # Protected admin: login (Firebase Auth), dashboard (upload UI)
   api/              # Optional: used when reCAPTCHA is on; image-stats uses Firestore
-    galleries/      # POST: verify token, return folder names
+    admin/          # Protected by Firebase ID token (any logged-in user)
+      galleries/   # GET: list gallery folder names
+      upload/      # POST: upload images to a folder
+    galleries/      # POST: verify reCAPTCHA, return folder names
     image-stats/    # GET: download/share counts; POST: increment on download/share
-    images/         # POST: verify token, return images (signed URLs)
-  components/      # Header, Footer, ThemeScript
+    images/         # POST: verify reCAPTCHA, return images (signed URLs)
+  components/      # Header, Footer, ThemeScript, ConditionalLayout
   contexts/        # GalleriesContext (list + image cache)
   home/             # Main page + GalleryList + lightbox (Home.tsx)
-  lib/              # Firebase client, storage helpers, recaptcha, firebase-admin
+  lib/              # Firebase client, storage helpers, recaptcha, firebase-admin, admin-auth
   [[...gallery]]/  # Catch-all route: / and /:gallery
   layout.tsx       # Root layout, metadata, Analytics, SpeedInsights
   not-found.tsx    # 404 page

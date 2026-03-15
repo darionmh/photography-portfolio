@@ -36,23 +36,7 @@ function capDimensions(
   return { width: maxWidth, height: Math.round(height * scale) };
 }
 
-/** Encode storage fullPath to a URL-safe resource id for deep linking. */
-function toResourceId(fullPath: string): string {
-  const base64 = btoa(unescape(encodeURIComponent(fullPath)));
-  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-/** Decode resource id from URL back to storage fullPath. */
-function fromResourceId(id: string): string | null {
-  try {
-    const base64 = id.replace(/-/g, "+").replace(/_/g, "/");
-    const pad = base64.length % 4;
-    const padded = pad ? base64 + "=".repeat(4 - pad) : base64;
-    return decodeURIComponent(escape(atob(padded)));
-  } catch {
-    return null;
-  }
-}
+import { toResourceId, fromResourceId } from "@/app/lib/resource-id";
 
 function pathWithImage(pathname: string, resourceId: string | null): string {
   if (resourceId == null) return pathname;
@@ -222,7 +206,7 @@ export default function Home() {
   } = useGalleries();
   const [images, setImages] = useState<StorageImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [imageStats, setImageStats] = useState<Record<string, { downloads: number; shares: number }>>({});
+  const [imageStats, setImageStats] = useState<Record<string, { downloads: number; shares: number; metadata?: Record<string, string> }>>({});
   const [expanded, setExpanded] = useState<StorageImage | null>(null);
   const [expandedImageLoaded, setExpandedImageLoaded] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
@@ -626,11 +610,11 @@ export default function Home() {
           const baseName = image.dimensions?.baseName ?? image.name;
           const galleryContext =
             currentPage === HOME_PAGE ? "the places we went" : formatGalleryName(currentPage);
-          const alt = `${baseName} — ${galleryContext}`;
-          const isAboveFold = index < 6;
-
+          const defaultAlt = `${baseName} — ${galleryContext}`;
           const rid = toResourceId(image.fullPath);
           const stats = imageStats[rid];
+          const alt = (stats?.metadata?.alt?.trim() ? stats.metadata.alt : defaultAlt) ?? defaultAlt;
+          const isAboveFold = index < 6;
           const d = stats?.downloads ?? 0;
           const s = stats?.shares ?? 0;
           const hasStats = d > 0 || s > 0;
@@ -671,7 +655,7 @@ export default function Home() {
                   alt={alt}
                   width={width}
                   height={height}
-                  title={`${image.name} (${(image.size / 1024).toFixed(1)} KB). Click to expand`}
+                  title={stats?.metadata?.title?.trim() || `${image.name} (${(image.size / 1024).toFixed(1)} KB). Click to expand`}
                   className="w-full h-auto object-cover cursor-pointer pointer-events-none"
                   sizes={index === 0 ? "100vw" : "(max-width: 640px) 50vw, 33vw"}
                   draggable={false}
@@ -761,9 +745,16 @@ export default function Home() {
                   )}
                   <Image
                     src={expanded.url}
-                    alt={`${expanded.dimensions?.baseName ?? expanded.name} — ${
-                      currentPage === HOME_PAGE ? "the places we went" : formatGalleryName(currentPage)
-                    }`}
+                    alt={
+                      (() => {
+                        const rid = toResourceId(expanded.fullPath);
+                        const st = imageStats[rid];
+                        const fallback = `${expanded.dimensions?.baseName ?? expanded.name} — ${
+                          currentPage === HOME_PAGE ? "the places we went" : formatGalleryName(currentPage)
+                        }`;
+                        return (st?.metadata?.alt?.trim() ? st.metadata.alt : fallback) ?? fallback;
+                      })()
+                    }
                     width={expandedCap.width}
                     height={expandedCap.height}
                     className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-200 [-webkit-user-drag:none] [user-drag:none] ${
@@ -779,6 +770,37 @@ export default function Home() {
                   ← → to navigate
                 </p>
               )}
+              {(() => {
+                const rid = toResourceId(expanded.fullPath);
+                const st = imageStats[rid];
+                const meta = st?.metadata ?? {};
+                const caption = meta.caption?.trim();
+                const focal = meta.FocalLength ?? meta.focalLength ?? "";
+                const fNum = meta.FNumber ?? meta.fNumber ?? "";
+                const iso = meta.ISO ?? meta.iso ?? "";
+                const focalStr = focal ? `${focal}${/^\d+$/.test(String(focal)) ? "mm" : ""}` : "";
+                const fStopStr = fNum ? `f/${fNum}` : "";
+                const isoStr = iso ? `ISO ${iso}` : "";
+                const exifParts = [focalStr, fStopStr, isoStr].filter(Boolean);
+                const exifLine = exifParts.length > 0 ? exifParts.join("  ") : null;
+                const hasCaption = !!caption;
+                const hasExif = !!exifLine;
+                if (!hasCaption && !hasExif) return null;
+                return (
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full px-4 py-2 max-w-md text-center space-y-0.5">
+                    {caption ? (
+                      <p className="text-xs text-background/70 lowercase">
+                        {caption}
+                      </p>
+                    ) : null}
+                    {exifLine ? (
+                      <p className="text-xs text-background/60">
+                        {exifLine}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })()}
               <div className="absolute bottom-0 right-0 translate-y-full flex items-center gap-5 px-4 pt-4 pb-2 touch-manual">
                 {(() => {
                   const rid = toResourceId(expanded.fullPath);

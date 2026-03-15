@@ -3,9 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
-import Footer from "./components/Footer";
-import Header from "./components/Header";
 import ThemeScript from "./components/ThemeScript";
+import ConditionalLayout from "./components/ConditionalLayout";
 import { GalleriesProvider } from "./contexts/GalleriesContext";
 
 const geistSans = Geist({
@@ -107,12 +106,8 @@ export default function RootLayout({
           Skip to main content
         </a>
         <GalleriesProvider>
-          <Header />
-          <main id="main" className="container flex-1 py-8" tabIndex={-1}>
-            {children}
-          </main>
+          <ConditionalLayout>{children}</ConditionalLayout>
         </GalleriesProvider>
-        <Footer />
         <Analytics />
         <SpeedInsights />
       </body>

@@ -5,9 +5,10 @@ import { FieldValue } from "firebase-admin/firestore";
 export interface ImageStats {
   downloads: number;
   shares: number;
+  metadata?: Record<string, string>;
 }
 
-/** GET ?ids=id1,id2 — returns { [id]: { downloads, shares } } */
+/** GET ?ids=id1,id2 — returns { [id]: { downloads, shares, metadata?: { [key]: value } } } */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -27,9 +28,24 @@ export async function GET(request: Request) {
     ids.forEach((id, i) => {
       const snap = snapshots[i];
       const data = snap?.data();
+      const rawMeta = data?.metadata;
+      let metadata: Record<string, string> =
+        rawMeta && typeof rawMeta === "object" && !Array.isArray(rawMeta)
+          ? Object.fromEntries(
+              Object.entries(rawMeta).filter(
+                (e): e is [string, string] =>
+                  typeof e[0] === "string" && typeof e[1] === "string"
+              )
+            )
+          : {};
+      // Backward compat: old docs had top-level alt, caption, title
+      if (typeof data?.alt === "string") metadata.alt = data.alt;
+      if (typeof data?.caption === "string") metadata.caption = data.caption;
+      if (typeof data?.title === "string") metadata.title = data.title;
       stats[id] = {
         downloads: Number(data?.downloads ?? 0),
         shares: Number(data?.shares ?? 0),
+        ...(Object.keys(metadata).length > 0 && { metadata }),
       };
     });
     return NextResponse.json({ stats });
