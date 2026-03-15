@@ -1,36 +1,123 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# The Places We Went
 
-## Getting Started
+A photography portfolio built with Next.js and Firebase Storage. Galleries are loaded from your bucket; images support lightbox, deep linking, download, and share. Optional reCAPTCHA v3 and Vercel Analytics are included.
 
-First, run the development server:
+## Features
+
+- **Galleries** – Top-level folders in Firebase Storage become galleries; home shows all images.
+- **Lightbox** – Click any image to expand; keyboard (Escape, Arrow Left/Right), focus trap, and return focus.
+- **Deep links** – Share a URL with `?image=...` to open that image in the lightbox.
+- **Download & share** – Download button in lightbox; share uses Web Share API or copies link.
+- **Theme** – Light (default) or dark mode, persisted in `localStorage`.
+- **Responsive** – Mobile: horizontal gallery pills + dropdown; desktop: sticky sidebar.
+- **reCAPTCHA v3** (optional) – Gate gallery/image data behind verification to reduce scraping.
+- **Analytics** – Vercel Analytics and Speed Insights; custom events for lightbox, gallery selection, theme, contact, etc.
+
+## Tech stack
+
+- **Next.js 16** (App Router)
+- **React 19**
+- **Firebase** (client: Storage for images; optional server: Admin SDK when reCAPTCHA is on)
+- **Tailwind CSS 4**
+- **Vercel** – Analytics, Speed Insights, deployment
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 18+
+- A Firebase project with Storage (and a bucket with image folders)
+
+### 1. Clone and install
+
+```bash
+git clone <your-repo-url>
+cd photography-portfolio
+npm install
+```
+
+### 2. Firebase
+
+- In [Firebase Console](https://console.firebase.google.com), create a project and enable **Storage**.
+- Add your bucket structure: create top-level folders (e.g. `Cover Photos`, `Landscapes`); put images inside. Supported extensions: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.avif`.
+- In **Project settings → General**, add a web app and copy the config. Add each field to `.env.local` as `NEXT_PUBLIC_FIREBASE_*` (see table below).
+
+### 3. Environment variables
+
+Copy `.env.example` to `.env.local` and set at least:
+
+```bash
+cp .env.example .env.local
+```
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_INSTAGRAM_URL` | Yes | Full URL to your Instagram (header, footer, about). |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Yes | Firebase web app config (Project settings → Your apps). |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Yes | Firebase auth domain. |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Yes | Firebase project ID. |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Yes | Firebase Storage bucket. |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Yes | Firebase messaging sender ID. |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | Yes | Firebase app ID. |
+| `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` | No | Firebase Analytics measurement ID (optional). |
+| `NEXT_PUBLIC_COPYRIGHT_NAME` | No | Name in footer copyright line (e.g. `Darion Higgins`). |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | No | If set, shows a “contact” mailto link in the footer. |
+| `NEXT_PUBLIC_SITE_URL` | No | Canonical URL for Open Graph (e.g. `https://theplaceswewent.com`). |
+
+**Optional – reCAPTCHA (bot protection)**
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | If using reCAPTCHA | From [Google reCAPTCHA Admin](https://www.google.com/recaptcha/admin) (v3). |
+| `RECAPTCHA_SECRET_KEY` | If using reCAPTCHA | Secret key for server-side verification. |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | If using reCAPTCHA | Full JSON string of your Firebase service account key. |
+| `FIREBASE_STORAGE_BUCKET` | No | Bucket name (e.g. `myapp.firebasestorage.app`) if different from client config. |
+
+When reCAPTCHA keys are set, gallery list and image data are served via API routes after token verification; otherwise the app talks to Firebase Storage directly from the client.
+
+### 4. Run locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). You should see the home feed (all images) and the galleries from your bucket in the nav/sidebar.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start dev server (with Turbopack). |
+| `npm run build` | Production build. |
+| `npm run start` | Run production server. |
+| `npm run lint` | Run ESLint. |
 
-## Learn More
+## Project structure
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+app/
+  api/              # Optional: used when reCAPTCHA is on
+    galleries/      # POST: verify token, return folder names
+    images/         # POST: verify token, return images (signed URLs)
+  components/      # Header, Footer, ThemeScript
+  contexts/        # GalleriesContext (list + image cache)
+  home/             # Main page + GalleryList + lightbox (Home.tsx)
+  lib/              # Firebase client, storage helpers, recaptcha, firebase-admin
+  [[...gallery]]/  # Catch-all route: / and /:gallery
+  layout.tsx       # Root layout, metadata, Analytics, SpeedInsights
+  not-found.tsx    # 404 page
+```
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Push the repo to GitHub/GitLab/Bitbucket and [import the project on Vercel](https://vercel.com/new).
+2. Add the same environment variables in the Vercel project (Settings → Environment Variables). For `FIREBASE_SERVICE_ACCOUNT_JSON`, paste the full JSON as one line.
+3. Deploy. Enable **Web Analytics** and **Speed Insights** (and **Custom Events** for analytics) in the Vercel dashboard so you get page views and the custom events (lightbox, gallery selected, theme toggled, etc.).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Image naming (optional)
+
+Filenames like `photo.1920x1080.jpg` are parsed for dimensions and used for layout and `alt` text. Other names still work; dimensions and alt fall back to defaults.
+
+## License
+
+Private. All rights reserved.

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { track } from "@vercel/analytics";
 import { useGalleries } from "../contexts/GalleriesContext";
 import { HOME_PAGE, pathForGallery, formatGalleryName } from "../lib/galleries";
 import { getRecaptchaToken, isRecaptchaEnabled } from "../lib/recaptcha";
@@ -305,13 +306,15 @@ export default function Home() {
     (image: StorageImage, trigger?: HTMLElement) => {
       lightboxTriggerRef.current = trigger ?? null;
       setExpanded(image);
+      track("lightbox_opened", { gallery: currentPage || "home", path: pathname });
       router.push(pathWithImage(pathname, toResourceId(image.fullPath)), { scroll: false });
     },
-    [router, pathname]
+    [router, pathname, currentPage]
   );
 
   const selectGallery = useCallback(
     (page: string) => {
+      track("gallery_selected", { gallery: page === HOME_PAGE ? "home" : page });
       router.push(pathForGallery(page), { scroll: false });
     },
     [router]
@@ -319,6 +322,7 @@ export default function Home() {
 
   const closeExpanded = useCallback(() => {
     userClosedRef.current = true;
+    track("lightbox_closed");
     const trigger = lightboxTriggerRef.current;
     setExpanded(null);
     lightboxTriggerRef.current = null;
@@ -331,6 +335,7 @@ export default function Home() {
     (e: React.MouseEvent) => {
       e.stopPropagation();
       if (!expanded) return;
+      track("image_downloaded", { gallery: currentPage || "home" });
       const filename = expanded.name || "image";
       fetch(expanded.url, { mode: "cors" })
         .then((res) => res.blob())
@@ -346,13 +351,14 @@ export default function Home() {
           window.open(expanded.url, "_blank", "noopener,noreferrer");
         });
     },
-    [expanded]
+    [expanded, currentPage]
   );
 
   const handleShare = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
       if (!expanded) return;
+      track("image_shared", { gallery: currentPage || "home" });
       const shareUrl = typeof window !== "undefined" ? window.location.href : "";
       const title = expanded.dimensions?.baseName ?? expanded.name;
       if (typeof navigator !== "undefined" && navigator.share) {
@@ -366,7 +372,7 @@ export default function Home() {
         navigator.clipboard?.writeText(shareUrl).catch(() => {});
       }
     },
-    [expanded]
+    [expanded, currentPage]
   );
 
   useEffect(() => {
@@ -383,6 +389,7 @@ export default function Home() {
         const next = images[nextIdx];
         if (next) {
           e.preventDefault();
+          track("lightbox_navigate", { direction: e.key === "ArrowRight" ? "next" : "prev" });
           setExpanded(next);
           router.push(pathWithImage(pathname, toResourceId(next.fullPath)), { scroll: false });
         }
@@ -446,6 +453,7 @@ export default function Home() {
                   href={instagramUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => track("instagram_clicked", { location: "about" })}
                   className="font-medium text-foreground hover:text-muted underline-offset-4 hover:underline transition-colors cursor-pointer"
                 >
                   @the_places_we_went

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { track } from "@vercel/analytics";
 import { isRecaptchaEnabled } from "../lib/recaptcha";
 
 const THEME_KEY = "theme";
@@ -25,6 +26,7 @@ export default function Footer() {
       localStorage.setItem(THEME_KEY, "light");
     }
     setDark(next);
+    track("theme_toggled", { theme: next ? "dark" : "light" });
   };
 
   const instagramUrl =
@@ -39,13 +41,15 @@ export default function Footer() {
         <div className="flex items-center justify-between gap-4">
           <span className="text-sm text-muted">
             © {year}
-            {copyrightName ? ` ${copyrightName}` : "the places we went"}
+            {copyrightName ? ` ${copyrightName}. ` : " "}
+            the places we went
           </span>
         <div className="flex items-center gap-2">
           <a
             href={instagramUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => track("instagram_clicked", { location: "footer" })}
             className="p-2 rounded-md text-muted hover:text-foreground hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted transition-colors cursor-pointer"
             aria-label="Instagram"
           >
