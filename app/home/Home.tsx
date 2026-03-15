@@ -202,6 +202,8 @@ export default function Home() {
   const userClosedRef = useRef(false);
   const currentPathRef = useRef<string>("");
   const expandedPathRef = useRef<string | null>(null);
+  const lightboxTriggerRef = useRef<HTMLElement | null>(null);
+  const lightboxCloseButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Only reset loading when we're showing a different image (by fullPath), not when expanded gets a new object reference
   useEffect(() => {
@@ -300,7 +302,8 @@ export default function Home() {
   }, [images, isLoading, imageParam, pathname, router]);
 
   const openExpanded = useCallback(
-    (image: StorageImage) => {
+    (image: StorageImage, trigger?: HTMLElement) => {
+      lightboxTriggerRef.current = trigger ?? null;
       setExpanded(image);
       router.push(pathWithImage(pathname, toResourceId(image.fullPath)), { scroll: false });
     },
@@ -316,9 +319,12 @@ export default function Home() {
 
   const closeExpanded = useCallback(() => {
     userClosedRef.current = true;
+    const trigger = lightboxTriggerRef.current;
     setExpanded(null);
+    lightboxTriggerRef.current = null;
     window.history.replaceState(null, "", pathname);
     router.replace(pathname, { scroll: false });
+    if (trigger?.focus) setTimeout(() => trigger.focus(), 0);
   }, [router, pathname]);
 
   const handleDownload = useCallback(
@@ -366,18 +372,46 @@ export default function Home() {
   useEffect(() => {
     if (!expanded) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeExpanded();
+      if (e.key === "Escape") {
+        closeExpanded();
+        return;
+      }
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        const idx = images.findIndex((img) => img.fullPath === expanded.fullPath);
+        if (idx < 0) return;
+        const nextIdx = e.key === "ArrowRight" ? idx + 1 : idx - 1;
+        const next = images[nextIdx];
+        if (next) {
+          e.preventDefault();
+          setExpanded(next);
+          router.push(pathWithImage(pathname, toResourceId(next.fullPath)), { scroll: false });
+        }
+      }
+      if (e.key === "Tab") {
+        const dialog = lightboxCloseButtonRef.current?.closest("[role=dialog]");
+        if (!dialog) return;
+        const focusable = Array.from(dialog.querySelectorAll<HTMLElement>("button, [href]")).filter(
+          (el) => !el.hasAttribute("disabled") && el.tabIndex !== -1
+        );
+        if (focusable.length === 0) return;
+        const i = focusable.indexOf(document.activeElement as HTMLElement);
+        const nextI = e.shiftKey ? (i <= 0 ? focusable.length - 1 : i - 1) : (i >= focusable.length - 1 ? 0 : i + 1);
+        e.preventDefault();
+        focusable[nextI]?.focus();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [expanded, closeExpanded]);
+  }, [expanded, closeExpanded, images, pathname, router]);
 
-  // Lock body scroll when lightbox is open (helps mobile/tablet avoid background scroll)
+  // Lock body scroll when lightbox is open; focus close button for keyboard users
   useEffect(() => {
     if (!expanded) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const t = setTimeout(() => lightboxCloseButtonRef.current?.focus(), 50);
     return () => {
+      clearTimeout(t);
       document.body.style.overflow = prev;
     };
   }, [expanded]);
@@ -428,6 +462,12 @@ export default function Home() {
                 aria-hidden
               />
             ))
+          : images.length === 0
+          ? (
+              <p className="col-span-full text-sm text-muted py-8 text-center">
+                No images in this gallery yet.
+              </p>
+            )
           : images.map((image, index) => {
           const width = image.dimensions?.width ?? 800;
           const height = image.dimensions?.height ?? 600;
@@ -438,7 +478,7 @@ export default function Home() {
             <button
               key={image.fullPath}
               type="button"
-              onClick={() => openExpanded(image)}
+              onClick={(e) => openExpanded(image, e.currentTarget)}
               onContextMenu={(e) => e.preventDefault()}
               className="block w-full text-left overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted select-none"
             >
@@ -546,6 +586,7 @@ export default function Home() {
             </div>
           </div>
           <button
+            ref={lightboxCloseButtonRef}
             type="button"
             onClick={closeExpanded}
             className="absolute z-10 flex items-center justify-center min-w-[44px] min-h-[44px] p-2 text-background/90 hover:bg-background/10 hover:text-background active:bg-background/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-background rounded-full touch-manual cursor-pointer"
@@ -553,7 +594,7 @@ export default function Home() {
               top: "max(0.75rem, env(safe-area-inset-top))",
               right: "max(0.75rem, env(safe-area-inset-right))",
             }}
-            aria-label="Close"
+            aria-label="Close (Escape)"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
               <path d="M18 6 6 18" />

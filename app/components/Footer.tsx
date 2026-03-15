@@ -29,6 +29,7 @@ export default function Footer() {
 
   const instagramUrl =
     process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? "https://instagram.com";
+  const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
   const copyrightName = process.env.NEXT_PUBLIC_COPYRIGHT_NAME;
   const year = new Date().getFullYear();
 
