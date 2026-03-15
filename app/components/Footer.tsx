@@ -149,9 +149,21 @@ export default function Footer() {
             >
               Terms of Service
             </a>{" "}
-            apply.
+            apply.{" "}
+            <a href="/privacy" className="underline hover:text-foreground">
+              Privacy
+            </a>
           </p>
         )}
+        <p className="text-xs text-muted">
+          <a href="/privacy" className="underline hover:text-foreground">
+            Privacy
+          </a>
+          {" · "}
+          <a href="/feed" className="underline hover:text-foreground">
+            RSS
+          </a>
+        </p>
       </div>
     </footer>
   );

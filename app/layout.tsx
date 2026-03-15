@@ -72,6 +72,15 @@ export default function RootLayout({
     inLanguage: "en-US",
   };
 
+  const imageGalleryJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ImageGallery",
+    name: "The Places We Went — Photography by Darion",
+    description: "Photo gallery: landscapes, wildlife, architecture.",
+    url: baseUrl,
+    author: { "@type": "Person", name: "Darion" },
+  };
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -85,10 +94,17 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(imageGalleryJsonLd) }}
+        />
         <ThemeScript />
+        <a href="#main" className="skip-link">
+          Skip to main content
+        </a>
         <GalleriesProvider>
           <Header />
-          <main className="container flex-1 py-8">
+          <main id="main" className="container flex-1 py-8" tabIndex={-1}>
             {children}
           </main>
         </GalleriesProvider>

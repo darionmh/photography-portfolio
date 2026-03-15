@@ -17,6 +17,10 @@ const GALLERY_MAX_WIDTH = 640;
 /** Max width for expanded/lightbox view. */
 const EXPANDED_MAX_WIDTH = 1600;
 
+/** Tiny gray placeholder for blur (avoids layout shift). */
+const BLUR_DATA_URL =
+  "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBEQACEQADAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8BmX//2Q==";
+
 function capDimensions(
   width: number,
   height: number,
@@ -216,11 +220,15 @@ export default function Home() {
   const [imageStats, setImageStats] = useState<Record<string, { downloads: number; shares: number }>>({});
   const [expanded, setExpanded] = useState<StorageImage | null>(null);
   const [expandedImageLoaded, setExpandedImageLoaded] = useState(false);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [showLightboxHint, setShowLightboxHint] = useState(false);
   const userClosedRef = useRef(false);
   const currentPathRef = useRef<string>("");
   const expandedPathRef = useRef<string | null>(null);
   const lightboxTriggerRef = useRef<HTMLElement | null>(null);
   const lightboxCloseButtonRef = useRef<HTMLButtonElement | null>(null);
+  const lightboxRef = useRef<HTMLDivElement | null>(null);
+  const touchStartX = useRef<number>(0);
 
   // Only reset loading when we're showing a different image (by fullPath), not when expanded gets a new object reference
   useEffect(() => {
@@ -356,6 +364,9 @@ export default function Home() {
   const closeExpanded = useCallback(() => {
     userClosedRef.current = true;
     track("lightbox_closed");
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
     const trigger = lightboxTriggerRef.current;
     setExpanded(null);
     lightboxTriggerRef.current = null;
@@ -363,6 +374,22 @@ export default function Home() {
     router.replace(pathname, { scroll: false });
     if (trigger?.focus) setTimeout(() => trigger.focus(), 0);
   }, [router, pathname]);
+
+  const goToAdjacent = useCallback(
+    (direction: "prev" | "next") => {
+      if (!expanded) return;
+      const idx = images.findIndex((img) => img.fullPath === expanded.fullPath);
+      if (idx < 0) return;
+      const nextIdx = direction === "next" ? idx + 1 : idx - 1;
+      const next = images[nextIdx];
+      if (next) {
+        track("lightbox_navigate", { direction });
+        setExpanded(next);
+        router.push(pathWithImage(pathname, toResourceId(next.fullPath)), { scroll: false });
+      }
+    },
+    [expanded, images, pathname, router]
+  );
 
   const recordImageAction = useCallback(
     (resourceId: string, action: "download" | "share") => {
@@ -439,16 +466,8 @@ export default function Home() {
         return;
       }
       if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-        const idx = images.findIndex((img) => img.fullPath === expanded.fullPath);
-        if (idx < 0) return;
-        const nextIdx = e.key === "ArrowRight" ? idx + 1 : idx - 1;
-        const next = images[nextIdx];
-        if (next) {
-          e.preventDefault();
-          track("lightbox_navigate", { direction: e.key === "ArrowRight" ? "next" : "prev" });
-          setExpanded(next);
-          router.push(pathWithImage(pathname, toResourceId(next.fullPath)), { scroll: false });
-        }
+        e.preventDefault();
+        goToAdjacent(e.key === "ArrowRight" ? "next" : "prev");
       }
       if (e.key === "Tab") {
         const dialog = lightboxCloseButtonRef.current?.closest("[role=dialog]");
@@ -465,7 +484,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [expanded, closeExpanded, images, pathname, router]);
+  }, [expanded, closeExpanded, goToAdjacent]);
 
   // Lock body scroll when lightbox is open; focus close button for keyboard users
   useEffect(() => {
@@ -476,6 +495,43 @@ export default function Home() {
     return () => {
       clearTimeout(t);
       document.body.style.overflow = prev;
+    };
+  }, [expanded]);
+
+  // Preload adjacent images when lightbox is open
+  useEffect(() => {
+    if (!expanded || images.length === 0) return;
+    const idx = images.findIndex((img) => img.fullPath === expanded.fullPath);
+    if (idx < 0) return;
+    [idx - 1, idx + 1].forEach((i) => {
+      const img = images[i];
+      if (img?.url) {
+        const preload = new window.Image();
+        preload.src = img.url;
+      }
+    });
+  }, [expanded, images]);
+
+  // Lightbox shortcut hint: show once, dismiss on key or after 3s
+  useEffect(() => {
+    if (!expanded) {
+      setShowLightboxHint(false);
+      return;
+    }
+    const dismissed = typeof localStorage !== "undefined" && localStorage.getItem("lightbox_hint_dismissed");
+    setShowLightboxHint(!dismissed);
+    const hide = () => {
+      setShowLightboxHint(false);
+      try {
+        localStorage.setItem("lightbox_hint_dismissed", "1");
+      } catch {}
+    };
+    const t = setTimeout(hide, 3000);
+    const onKey = () => hide();
+    window.addEventListener("keydown", onKey, { once: true });
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("keydown", onKey);
     };
   }, [expanded]);
 
@@ -565,27 +621,54 @@ export default function Home() {
           const d = stats?.downloads ?? 0;
           const s = stats?.shares ?? 0;
           const hasStats = d > 0 || s > 0;
+          const hasFailed = failedImages.has(image.fullPath);
 
           return (
             <button
               key={image.fullPath}
               type="button"
-              onClick={(e) => openExpanded(image, e.currentTarget)}
+              onClick={(e) => !hasFailed && openExpanded(image, e.currentTarget)}
               onContextMenu={(e) => e.preventDefault()}
               className="block w-full text-left overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted select-none relative"
             >
-              <Image
-                src={image.url}
-                alt={alt}
-                width={width}
-                height={height}
-                title={`${image.name} (${(image.size / 1024).toFixed(1)} KB). Click to expand`}
-                className="w-full h-auto object-cover cursor-pointer pointer-events-none"
-                sizes="(max-width: 640px) 50vw, 33vw"
-                draggable={false}
-                {...(isAboveFold ? { priority: true } : { loading: "lazy" })}
-              />
-              {hasStats && (
+              {hasFailed ? (
+                <div
+                  className="aspect-[4/3] w-full bg-surface flex flex-col items-center justify-center gap-2 p-4"
+                  style={{ minHeight: (height / width) * 200 }}
+                >
+                  <span className="text-xs text-muted">Failed to load</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFailedImages((prev) => {
+                        const next = new Set(prev);
+                        next.delete(image.fullPath);
+                        return next;
+                      });
+                    }}
+                    className="text-xs font-medium text-foreground underline underline-offset-2 hover:text-muted"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                <Image
+                  src={image.url}
+                  alt={alt}
+                  width={width}
+                  height={height}
+                  placeholder="blur"
+                  blurDataURL={BLUR_DATA_URL}
+                  title={`${image.name} (${(image.size / 1024).toFixed(1)} KB). Click to expand`}
+                  className="w-full h-auto object-cover cursor-pointer pointer-events-none"
+                  sizes="(max-width: 640px) 50vw, 33vw"
+                  draggable={false}
+                  {...(isAboveFold ? { priority: true } : { loading: "lazy" })}
+                  onError={() => setFailedImages((prev) => new Set(prev).add(image.fullPath))}
+                />
+              )}
+              {hasStats && !hasFailed && (
                 <span
                   className="absolute bottom-1 left-1 right-1 text-[10px] text-white/90 bg-black/40 px-1.5 py-0.5 rounded lowercase"
                   aria-label={`${d} downloads, ${s} shares`}
@@ -614,11 +697,21 @@ export default function Home() {
 
       {expanded && (
         <div
+          ref={lightboxRef}
           role="dialog"
           aria-modal="true"
           aria-label="Expanded image"
           className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/90 overscroll-contain"
           onClick={closeExpanded}
+          onTouchStart={(e) => {
+            touchStartX.current = e.touches[0]?.clientX ?? 0;
+          }}
+          onTouchEnd={(e) => {
+            const endX = e.changedTouches[0]?.clientX ?? 0;
+            const delta = endX - touchStartX.current;
+            if (delta > 50) goToAdjacent("prev");
+            else if (delta < -50) goToAdjacent("next");
+          }}
         >
           <div
             className="absolute inset-0 flex items-center justify-center"
@@ -657,6 +750,8 @@ export default function Home() {
                   expanded.dimensions?.height ?? 1080,
                   EXPANDED_MAX_WIDTH
                 ).height}
+                placeholder="blur"
+                blurDataURL={BLUR_DATA_URL}
                 className={`max-w-full max-h-[min(80vh,80dvh)] w-auto h-auto object-contain transition-opacity duration-200 [-webkit-user-drag:none] [user-drag:none] ${
                   expandedImageLoaded ? "opacity-100" : "opacity-0"
                 }`}
@@ -665,6 +760,11 @@ export default function Home() {
                 draggable={false}
                 onLoad={() => setExpandedImageLoaded(true)}
               />
+              {showLightboxHint && (
+                <p className="absolute bottom-0 left-0 translate-y-full text-xs text-background/60 px-4 py-2 lowercase" aria-live="polite">
+                  ← → to navigate
+                </p>
+              )}
               <div className="absolute bottom-0 right-0 translate-y-full flex items-center gap-5 px-4 pt-4 pb-2 touch-manual">
                 {(() => {
                   const rid = toResourceId(expanded.fullPath);
@@ -677,6 +777,22 @@ export default function Home() {
                     </span>
                   );
                 })()}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    lightboxRef.current?.requestFullscreen?.().catch(() => {});
+                  }}
+                  className="flex items-center justify-center w-9 h-9 rounded-full text-background/90 bg-background/10 hover:bg-background/20 active:bg-background/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-background cursor-pointer"
+                  aria-label="Fullscreen"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                    <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+                    <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                    <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+                  </svg>
+                </button>
                 <button
                   type="button"
                   onClick={handleDownload}

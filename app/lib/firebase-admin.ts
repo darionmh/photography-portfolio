@@ -33,16 +33,15 @@ const IMAGE_STATS_COLLECTION = "imageStats";
 function ensureAdmin() {
   if (!admin.apps.length) {
     const cred = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-    if (cred) {
-      try {
-        const serviceAccount = JSON.parse(cred) as admin.ServiceAccount;
-        admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-      } catch (e) {
-        console.error("Invalid FIREBASE_SERVICE_ACCOUNT_JSON", e);
-        throw new Error("Firebase Admin: invalid service account");
-      }
-    } else {
-      admin.initializeApp({ credential: admin.credential.applicationDefault() });
+    if (!cred) {
+      throw new Error("Firebase Admin: FIREBASE_SERVICE_ACCOUNT_JSON is not set");
+    }
+    try {
+      const serviceAccount = JSON.parse(cred) as admin.ServiceAccount;
+      admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    } catch (e) {
+      console.error("Invalid FIREBASE_SERVICE_ACCOUNT_JSON", e);
+      throw new Error("Firebase Admin: invalid service account");
     }
   }
 }
