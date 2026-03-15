@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, startTransition } from "react";
 import { track } from "@vercel/analytics";
 import { useGalleries } from "../contexts/GalleriesContext";
 import { HOME_PAGE, pathForGallery, formatGalleryName } from "../lib/galleries";
@@ -11,6 +11,15 @@ import { getImagesFromStorage, type StorageImage } from "../lib/storage";
 
 const SKELETON_COUNT = 6;
 const IMAGE_PARAM = "image";
+
+/** Defer analytics to after next paint to keep interaction handlers fast (INP). */
+function deferredTrack(...args: Parameters<typeof track>) {
+  if (typeof requestAnimationFrame !== "undefined") {
+    requestAnimationFrame(() => track(...args));
+  } else {
+    track(...args);
+  }
+}
 
 /** Max width for gallery thumbnails; Next.js will serve at or below this. */
 const GALLERY_MAX_WIDTH = 640;
@@ -343,32 +352,38 @@ export default function Home() {
     (image: StorageImage, trigger?: HTMLElement) => {
       lightboxTriggerRef.current = trigger ?? null;
       setExpanded(image);
-      track("lightbox_opened", { gallery: currentPage || "home", path: pathname });
-      router.push(pathWithImage(pathname, toResourceId(image.fullPath)), { scroll: false });
+      deferredTrack("lightbox_opened", { gallery: currentPage || "home", path: pathname });
+      startTransition(() => {
+        router.push(pathWithImage(pathname, toResourceId(image.fullPath)), { scroll: false });
+      });
     },
     [router, pathname, currentPage]
   );
 
   const selectGallery = useCallback(
     (page: string) => {
-      track("gallery_selected", { gallery: page === HOME_PAGE ? "home" : page });
-      router.push(pathForGallery(page), { scroll: false });
+      deferredTrack("gallery_selected", { gallery: page === HOME_PAGE ? "home" : page });
+      startTransition(() => {
+        router.push(pathForGallery(page), { scroll: false });
+      });
     },
     [router]
   );
 
   const closeExpanded = useCallback(() => {
     userClosedRef.current = true;
-    track("lightbox_closed");
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
-    }
+    deferredTrack("lightbox_closed");
     const trigger = lightboxTriggerRef.current;
     setExpanded(null);
     lightboxTriggerRef.current = null;
-    window.history.replaceState(null, "", pathname);
-    router.replace(pathname, { scroll: false });
-    if (trigger?.focus) setTimeout(() => trigger.focus(), 0);
+    startTransition(() => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+      window.history.replaceState(null, "", pathname);
+      router.replace(pathname, { scroll: false });
+      if (trigger?.focus) setTimeout(() => trigger.focus(), 0);
+    });
   }, [router, pathname]);
 
   const goToAdjacent = useCallback(
@@ -379,9 +394,11 @@ export default function Home() {
       const nextIdx = direction === "next" ? idx + 1 : idx - 1;
       const next = images[nextIdx];
       if (next) {
-        track("lightbox_navigate", { direction });
         setExpanded(next);
-        router.push(pathWithImage(pathname, toResourceId(next.fullPath)), { scroll: false });
+        deferredTrack("lightbox_navigate", { direction });
+        startTransition(() => {
+          router.push(pathWithImage(pathname, toResourceId(next.fullPath)), { scroll: false });
+        });
       }
     },
     [expanded, images, pathname, router]
@@ -412,7 +429,7 @@ export default function Home() {
     (e: React.MouseEvent) => {
       e.stopPropagation();
       if (!expanded) return;
-      track("image_downloaded", { gallery: currentPage || "home" });
+      deferredTrack("image_downloaded", { gallery: currentPage || "home" });
       recordImageAction(toResourceId(expanded.fullPath), "download");
       const filename = expanded.name || "image";
       fetch(expanded.url, { mode: "cors" })
@@ -436,7 +453,7 @@ export default function Home() {
     (e: React.MouseEvent) => {
       e.stopPropagation();
       if (!expanded) return;
-      track("image_shared", { gallery: currentPage || "home" });
+      deferredTrack("image_shared", { gallery: currentPage || "home" });
       recordImageAction(toResourceId(expanded.fullPath), "share");
       const shareUrl = typeof window !== "undefined" ? window.location.href : "";
       const title = expanded.dimensions?.baseName ?? expanded.name;
@@ -562,7 +579,7 @@ export default function Home() {
                   href={instagramUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => track("instagram_clicked", { location: "about" })}
+                  onClick={() => deferredTrack("instagram_clicked", { location: "about" })}
                   className="font-medium text-foreground hover:text-muted underline-offset-4 hover:underline transition-colors cursor-pointer"
                 >
                   @the_places_we_went
@@ -575,7 +592,7 @@ export default function Home() {
                       href={buyMeACoffeeUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={() => track("buymeacoffee_clicked", { location: "about" })}
+                      onClick={() => deferredTrack("buymeacoffee_clicked", { location: "about" })}
                       className="font-medium text-foreground hover:text-muted underline-offset-4 hover:underline transition-colors cursor-pointer"
                     >
                       buy me a coffee
@@ -656,9 +673,10 @@ export default function Home() {
                   height={height}
                   title={`${image.name} (${(image.size / 1024).toFixed(1)} KB). Click to expand`}
                   className="w-full h-auto object-cover cursor-pointer pointer-events-none"
-                  sizes="(max-width: 640px) 50vw, 33vw"
+                  sizes={index === 0 ? "100vw" : "(max-width: 640px) 50vw, 33vw"}
                   draggable={false}
-                  {...(isAboveFold ? { priority: true } : { loading: "lazy" })}
+                  {...(isAboveFold ? { loading: 'eager' } : { loading: "lazy" })}
+                  {...(index < 3 ? { fetchPriority: "high" as const } : {})}
                   onError={() => setFailedImages((prev) => new Set(prev).add(image.fullPath))}
                 />
               )}

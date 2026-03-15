@@ -26,7 +26,7 @@ export default function Footer() {
       localStorage.setItem(THEME_KEY, "light");
     }
     setDark(next);
-    track("theme_toggled", { theme: next ? "dark" : "light" });
+    requestAnimationFrame(() => track("theme_toggled", { theme: next ? "dark" : "light" }));
   };
 
   const instagramUrl =
@@ -49,7 +49,7 @@ export default function Footer() {
               href={buyMeACoffeeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => track("buymeacoffee_clicked", { location: "footer" })}
+              onClick={() => requestAnimationFrame(() => track("buymeacoffee_clicked", { location: "footer" }))}
               className="text-sm text-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted rounded-sm px-2 py-1 transition-colors cursor-pointer lowercase"
             >
               support
@@ -59,7 +59,7 @@ export default function Footer() {
             href={instagramUrl}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => track("instagram_clicked", { location: "footer" })}
+            onClick={() => requestAnimationFrame(() => track("instagram_clicked", { location: "footer" }))}
             className="p-2 rounded-md text-muted hover:text-foreground hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted transition-colors cursor-pointer"
             aria-label="Instagram"
           >

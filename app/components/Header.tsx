@@ -127,7 +127,7 @@ export default function Header() {
             href={instagramUrl}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => track("instagram_clicked", { location: "header" })}
+            onClick={() => requestAnimationFrame(() => track("instagram_clicked", { location: "header" }))}
             className="text-muted hover:text-foreground transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-offset-2 shrink-0 p-1 rounded-sm cursor-pointer"
             aria-label="Instagram"
           >
