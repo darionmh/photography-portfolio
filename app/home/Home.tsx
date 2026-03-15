@@ -17,10 +17,6 @@ const GALLERY_MAX_WIDTH = 640;
 /** Max width for expanded/lightbox view. */
 const EXPANDED_MAX_WIDTH = 1600;
 
-/** Tiny gray placeholder for blur (avoids layout shift). */
-const BLUR_DATA_URL =
-  "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBEQACEQADAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8BmX//2Q==";
-
 function capDimensions(
   width: number,
   height: number,
@@ -658,8 +654,6 @@ export default function Home() {
                   alt={alt}
                   width={width}
                   height={height}
-                  placeholder="blur"
-                  blurDataURL={BLUR_DATA_URL}
                   title={`${image.name} (${(image.size / 1024).toFixed(1)} KB). Click to expand`}
                   className="w-full h-auto object-cover cursor-pointer pointer-events-none"
                   sizes="(max-width: 640px) 50vw, 33vw"
@@ -750,8 +744,6 @@ export default function Home() {
                   expanded.dimensions?.height ?? 1080,
                   EXPANDED_MAX_WIDTH
                 ).height}
-                placeholder="blur"
-                blurDataURL={BLUR_DATA_URL}
                 className={`max-w-full max-h-[min(80vh,80dvh)] w-auto h-auto object-contain transition-opacity duration-200 [-webkit-user-drag:none] [user-drag:none] ${
                   expandedImageLoaded ? "opacity-100" : "opacity-0"
                 }`}
