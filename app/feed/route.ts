@@ -37,10 +37,14 @@ export async function GET() {
           const id = toResourceId(img.fullPath);
           const itemUrl = `${baseUrl}/?image=${encodeURIComponent(id)}`;
           const itemTitle = img.dimensions?.baseName ?? img.name;
+          const contentType = img.contentType || "image/jpeg";
+          const enclosure = img.url
+            ? `\n      <enclosure url="${escapeXml(img.url)}" length="${img.size}" type="${escapeXml(contentType)}"/>`
+            : "";
           return `    <item>
       <title>${escapeXml(itemTitle)}</title>
       <link>${itemUrl}</link>
-      <guid isPermaLink="true">${itemUrl}</guid>
+      <guid isPermaLink="true">${itemUrl}</guid>${enclosure}
     </item>`;
         }
       )
