@@ -34,24 +34,34 @@ export default function Header() {
   }, [galleriesOpen]);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border/80 bg-background/95 backdrop-blur-sm py-5 lg:py-7">
-      <div className="container flex items-center justify-between gap-4">
-        <div className="flex items-baseline gap-2 shrink-0 min-w-0">
-          <h1 className="text-xl font-medium tracking-tight text-foreground antialiased">
-            the places we went
-          </h1>
-          {currentPage !== HOME_PAGE && (
-            <span className="text-sm text-muted/90 tracking-wide truncate" aria-label={`Viewing gallery: ${formatGalleryName(currentPage)}`}>
-              / {formatGalleryName(currentPage)}
-            </span>
-          )}
+    <header className="sticky top-0 z-20 border-b border-border/80 bg-background/95 backdrop-blur-sm py-5 lg:py-6">
+      <div className="container flex items-center justify-between gap-6 sm:gap-8">
+        <div className="flex flex-col shrink-0 min-w-0 gap-0.5">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <h1 className="text-xl font-medium tracking-tight text-foreground antialiased lowercase">
+              the places we went
+            </h1>
+            {currentPage !== HOME_PAGE && (
+              <span className="hidden lg:inline text-sm text-muted/90 tracking-wide truncate lowercase" aria-label={`Viewing gallery: ${formatGalleryName(currentPage)}`}>
+                / {formatGalleryName(currentPage)}
+              </span>
+            )}
+          </div>
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-xs text-muted tracking-wide">photography by darion</span>
+            {currentPage !== HOME_PAGE && (
+              <span className="lg:hidden text-xs text-muted/90 tracking-wide truncate lowercase" aria-label={`Viewing gallery: ${formatGalleryName(currentPage)}`}>
+                / {formatGalleryName(currentPage)}
+              </span>
+            )}
+          </div>
         </div>
         {/* Right group: Home + Galleries (small viewports) + Instagram */}
-        <div className="flex items-center gap-5 sm:gap-6">
+        <div className="flex items-center gap-5 sm:gap-6 lowercase shrink-0">
           <div className="flex items-center gap-5 sm:gap-6 lg:hidden" ref={dropdownRef}>
             <Link
               href="/"
-              className="text-sm tracking-wide text-muted hover:text-foreground underline-offset-4 hover:underline transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-offset-2 rounded-sm cursor-pointer"
+              className="text-sm tracking-wide text-muted hover:text-foreground underline-offset-4 hover:underline transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-offset-2 rounded-sm cursor-pointer lowercase"
             >
               Home
             </Link>
@@ -59,7 +69,7 @@ export default function Header() {
               <button
                 type="button"
                 onClick={() => setGalleriesOpen((open) => !open)}
-                className="text-sm tracking-wide text-muted hover:text-foreground underline-offset-4 hover:underline transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-offset-2 flex items-center gap-1 bg-transparent border-none cursor-pointer font-normal p-0 rounded-sm"
+                className="text-sm tracking-wide text-muted hover:text-foreground underline-offset-4 hover:underline transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-offset-2 flex items-center gap-1 bg-transparent border-none cursor-pointer font-normal p-0 rounded-sm lowercase"
                 aria-expanded={galleriesOpen}
                 aria-haspopup="listbox"
                 aria-label="Galleries menu"
@@ -97,7 +107,7 @@ export default function Header() {
                           onClick={() => setGalleriesOpen(false)}
                           role="option"
                           aria-selected={isActive}
-                          className={`block w-full text-left px-4 py-2.5 text-sm tracking-wide cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-inset rounded-lg mx-1 transition-colors duration-150 ${
+                          className={`block w-full text-left px-4 py-2.5 text-sm tracking-wide cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-inset rounded-lg mx-1 transition-colors duration-150 lowercase ${
                             isActive
                               ? "text-foreground font-medium bg-surface/60"
                               : "text-muted hover:text-foreground hover:bg-surface/40"

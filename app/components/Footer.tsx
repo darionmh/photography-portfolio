@@ -29,13 +29,16 @@ export default function Footer() {
 
   const instagramUrl =
     process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? "https://instagram.com";
+  const copyrightName = process.env.NEXT_PUBLIC_COPYRIGHT_NAME;
+  const year = new Date().getFullYear();
 
   return (
     <footer className="border-t border-border mt-auto py-6">
       <div className="container flex flex-col gap-3">
         <div className="flex items-center justify-between gap-4">
           <span className="text-sm text-muted">
-            the places we went
+            © {year}
+            {copyrightName ? ` ${copyrightName}` : "the places we went"}
           </span>
         <div className="flex items-center gap-2">
           <a

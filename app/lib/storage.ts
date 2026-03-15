@@ -142,6 +142,6 @@ export async function getImagesFromStorage(
   });
 
   const images = await Promise.all(imagePromises);
-  images.sort((a, b) => a.fullPath.localeCompare(b.fullPath));
+  images.sort((a, b) => (b.timeCreated || "").localeCompare(a.timeCreated || ""));
   return images;
 }

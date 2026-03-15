@@ -76,7 +76,7 @@ function GalleryList({
 
   if (variant === "horizontal") {
     return (
-      <nav aria-label="Galleries" className="flex flex-col gap-1">
+      <nav aria-label="Galleries" className="flex flex-col gap-1 lowercase">
         <div className="relative">
           <div
             ref={scrollRef}
@@ -85,12 +85,12 @@ function GalleryList({
             <button
               type="button"
               onClick={() => onSelect(HOME_PAGE)}
-              className={`shrink-0 snap-start px-4 py-2.5 rounded-full whitespace-nowrap ${baseTouch} ${homeClass}`}
+              className={`shrink-0 snap-start px-4 py-2.5 rounded-full whitespace-nowrap lowercase ${baseTouch} ${homeClass}`}
               aria-current={homeActive ? "page" : undefined}
             >
               Home
             </button>
-            <span className="shrink-0 self-center text-xs font-semibold uppercase tracking-wider text-muted">
+            <span className="shrink-0 self-center text-xs font-semibold tracking-wider text-muted lowercase">
               Galleries
             </span>
             {showSkeletons
@@ -108,7 +108,7 @@ function GalleryList({
                       key={name}
                       type="button"
                       onClick={() => onSelect(name)}
-                      className={`shrink-0 snap-start pl-2 px-4 py-2.5 rounded-full whitespace-nowrap ${baseTouch} ${
+                      className={`shrink-0 snap-start pl-2 px-4 py-2.5 rounded-full whitespace-nowrap lowercase ${baseTouch} ${
                         isActive ? activeClass : inactiveClass
                       }`}
                       aria-current={isActive ? "page" : undefined}
@@ -142,16 +142,16 @@ function GalleryList({
   }
 
   return (
-    <nav aria-label="Galleries" className="flex flex-col gap-1">
+    <nav aria-label="Galleries" className="flex flex-col gap-1 lowercase">
       <button
         type="button"
         onClick={() => onSelect(HOME_PAGE)}
-        className={`block w-full text-left px-4 py-2 rounded-md ${baseTouch} ${homeClass}`}
+        className={`block w-full text-left px-4 py-2 rounded-md lowercase ${baseTouch} ${homeClass}`}
         aria-current={homeActive ? "page" : undefined}
       >
         Home
       </button>
-      <h2 className="px-4 pt-2 pb-0.5 text-xs font-semibold uppercase tracking-wider text-muted">
+      <h2 className="px-4 pt-2 pb-0.5 text-xs font-semibold tracking-wider text-muted lowercase">
         Galleries
       </h2>
       {showSkeletons
@@ -169,7 +169,7 @@ function GalleryList({
                 key={name}
                 type="button"
                 onClick={() => onSelect(name)}
-                className={`block w-full text-left pl-6 pr-4 py-2 rounded-md ${baseTouch} ${
+                className={`block w-full text-left pl-6 pr-4 py-2 rounded-md lowercase ${baseTouch} ${
                   isActive ? activeClass : inactiveClass
                 }`}
                 aria-current={isActive ? "page" : undefined}
@@ -395,18 +395,12 @@ export default function Home() {
               className="mb-8 pb-8 border-b border-border/80"
               aria-labelledby="about-heading"
             >
-              <h2 id="about-heading" className="text-lg font-medium tracking-tight text-foreground mb-3">
+              <h2 id="about-heading" className="text-lg font-medium tracking-tight text-foreground mb-3 lowercase">
                 About
               </h2>
               <p className="text-muted text-sm leading-relaxed max-w-xl">
                 Landscapes, wildlife, architecture, whatever the road turns up.
                 I like the mix of big sky and small detail, the planned stop and the turn we didn’t expect.
-              </p>
-              <p className="text-muted text-sm leading-relaxed max-w-xl mt-4">
-                I want images that hold a moment without over-explaining it. Over time, a body of work that reads like a map of where I’ve been.
-              </p>
-              <p className="text-muted text-sm leading-relaxed max-w-xl mt-4">
-                Inspired by late light, empty roads, crowded streets, and work that leaves room for the viewer. Craft and intention matter; so do accident and the shot you didn’t plan.
               </p>
               <p className="text-muted text-sm leading-relaxed max-w-xl mt-4">
                 Photography turns experience into something you can return to and share. It’s a way to look twice, and proof that we were here.

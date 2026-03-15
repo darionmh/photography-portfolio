@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "The Places We Went",
-  description: "Photography portfolio",
+  title: "The Places We Went | Photography by Darion",
+  description: "Photography by Darion. Landscapes, wildlife, architecture — the places we went, and what stuck.",
 };
 
 export default function RootLayout({

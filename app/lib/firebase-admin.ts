@@ -120,6 +120,6 @@ export async function getImagesInPath(path: string = ""): Promise<StorageImageSe
       };
     })
   );
-  results.sort((a, b) => a.fullPath.localeCompare(b.fullPath));
+  results.sort((a, b) => (b.timeCreated || "").localeCompare(a.timeCreated || ""));
   return results;
 }
