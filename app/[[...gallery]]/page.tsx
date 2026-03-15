@@ -3,7 +3,7 @@ import Home from "../home/Home";
 import { formatGalleryName } from "../lib/galleries";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://theplaceswewent.com";
-const defaultTitle = "The Places We Went | Photography by Darion";
+const defaultTitle = "Photography by Darion";
 const defaultDescription =
   "Photography by Darion. Landscapes, wildlife, architecture — the places we went, and what stuck.";
 
