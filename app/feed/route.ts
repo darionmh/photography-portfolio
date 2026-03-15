@@ -2,6 +2,7 @@ import { getImagesInPath } from "@/app/lib/firebase-admin";
 
 const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://theplaceswewent.com").replace(/\/$/, "");
 const RSS_MAX_ITEMS = 20;
+const RSS_IMAGE_WIDTH = 1200;
 
 function toResourceId(fullPath: string): string {
   const base64 = Buffer.from(unescape(encodeURIComponent(fullPath)), "binary").toString("base64");
@@ -38,8 +39,11 @@ export async function GET() {
           const itemUrl = `${baseUrl}/?image=${encodeURIComponent(id)}`;
           const itemTitle = img.dimensions?.baseName ?? img.name;
           const contentType = img.contentType || "image/jpeg";
-          const enclosure = img.url
-            ? `\n      <enclosure url="${escapeXml(img.url)}" length="${img.size}" type="${escapeXml(contentType)}"/>`
+          const imageUrl = img.url
+            ? `${baseUrl}/_next/image?url=${encodeURIComponent(img.url)}&w=${RSS_IMAGE_WIDTH}&q=75`
+            : "";
+          const enclosure = imageUrl
+            ? `\n      <enclosure url="${escapeXml(imageUrl)}" length="${Math.round(img.size * 0.5)}" type="${escapeXml(contentType)}"/>`
             : "";
           return `    <item>
       <title>${escapeXml(itemTitle)}</title>

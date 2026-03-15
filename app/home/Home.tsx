@@ -716,42 +716,46 @@ export default function Home() {
               paddingLeft: "max(0.75rem, env(safe-area-inset-left))",
             }}
           >
-            <div
-              className="relative flex items-center justify-center min-w-[120px] min-h-[120px] max-h-[min(80vh,80dvh)] select-none"
-              onClick={(e) => e.stopPropagation()}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              {!expandedImageLoaded && (
+            {(() => {
+              const expandedCap = capDimensions(
+                expanded.dimensions?.width ?? 1920,
+                expanded.dimensions?.height ?? 1080,
+                EXPANDED_MAX_WIDTH
+              );
+              const ratio = expandedCap.width / expandedCap.height;
+              return (
                 <div
-                  className="absolute inset-0 flex items-center justify-center"
-                  aria-hidden
+                  className="relative flex items-center justify-center max-w-full max-h-[min(80vh,80dvh)] select-none"
+                  style={{
+                    aspectRatio: `${expandedCap.width} / ${expandedCap.height}`,
+                    width: `min(100%, calc(min(80vh, 80dvh) * ${ratio}))`,
+                    height: "auto",
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  onContextMenu={(e) => e.preventDefault()}
                 >
-                  <div className="w-10 h-10 border-2 border-background/30 border-t-background rounded-full animate-spin" />
-                </div>
-              )}
-              <Image
-                src={expanded.url}
-                alt={`${expanded.dimensions?.baseName ?? expanded.name} — ${
-                  currentPage === HOME_PAGE ? "the places we went" : formatGalleryName(currentPage)
-                }`}
-                width={capDimensions(
-                  expanded.dimensions?.width ?? 1920,
-                  expanded.dimensions?.height ?? 1080,
-                  EXPANDED_MAX_WIDTH
-                ).width}
-                height={capDimensions(
-                  expanded.dimensions?.width ?? 1920,
-                  expanded.dimensions?.height ?? 1080,
-                  EXPANDED_MAX_WIDTH
-                ).height}
-                className={`max-w-full max-h-[min(80vh,80dvh)] w-auto h-auto object-contain transition-opacity duration-200 [-webkit-user-drag:none] [user-drag:none] ${
-                  expandedImageLoaded ? "opacity-100" : "opacity-0"
-                }`}
-                sizes="100vw"
-                loading="lazy"
-                draggable={false}
-                onLoad={() => setExpandedImageLoaded(true)}
-              />
+                  {/* Skeleton reserves space while loading; removed when image loads so it never peeks at edges */}
+                  {!expandedImageLoaded && (
+                    <div
+                      className="absolute inset-0 bg-background/20 animate-pulse rounded-sm"
+                      aria-hidden
+                    />
+                  )}
+                  <Image
+                    src={expanded.url}
+                    alt={`${expanded.dimensions?.baseName ?? expanded.name} — ${
+                      currentPage === HOME_PAGE ? "the places we went" : formatGalleryName(currentPage)
+                    }`}
+                    width={expandedCap.width}
+                    height={expandedCap.height}
+                    className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-200 [-webkit-user-drag:none] [user-drag:none] ${
+                      expandedImageLoaded ? "opacity-100" : "opacity-0"
+                    }`}
+                    sizes="100vw"
+                    loading="lazy"
+                    draggable={false}
+                    onLoad={() => setExpandedImageLoaded(true)}
+                  />
               {showLightboxHint && (
                 <p className="absolute bottom-0 left-0 translate-y-full text-xs text-background/60 px-4 py-2 lowercase" aria-live="polite">
                   ← → to navigate
@@ -810,7 +814,9 @@ export default function Home() {
                   </svg>
                 </button>
               </div>
-            </div>
+                </div>
+              );
+            })()}
           </div>
           <button
             ref={lightboxCloseButtonRef}

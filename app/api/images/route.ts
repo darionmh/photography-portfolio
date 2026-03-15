@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { verifyRecaptchaToken } from "@/app/lib/recaptcha-server";
 import { getImagesInPath } from "@/app/lib/firebase-admin";
 
-// Optional: add rate limiting (e.g. Upstash Redis) to throttle requests per IP.
-
 export async function POST(request: Request) {
   try {
     const body = await request.json();
