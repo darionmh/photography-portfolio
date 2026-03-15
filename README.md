@@ -115,6 +115,13 @@ app/
 2. Add the same environment variables in the Vercel project (Settings → Environment Variables). For `FIREBASE_SERVICE_ACCOUNT_JSON`, paste the full JSON as one line.
 3. Deploy. Enable **Web Analytics** and **Speed Insights** (and **Custom Events** for analytics) in the Vercel dashboard so you get page views and the custom events (lightbox, gallery selected, theme toggled, etc.).
 
+### SEO
+
+- **Sitemap** – `/sitemap.xml` is generated (home page). Set `NEXT_PUBLIC_SITE_URL` so the sitemap uses your canonical URL.
+- **Robots** – `/robots.txt` allows all crawlers and points to the sitemap.
+- **Open Graph** – Add a 1200×630 image at `public/og.jpg` for link previews (e.g. social sharing). If missing, previews may fall back to your site title/description only.
+- **Structured data** – Person and WebSite JSON-LD are in the layout; gallery pages get dynamic `<title>` and canonical URLs.
+
 ## Image naming (optional)
 
 Filenames like `photo.1920x1080.jpg` are parsed for dimensions and used for layout and `alt` text. Other names still work; dimensions and alt fall back to defaults.

@@ -497,7 +497,10 @@ export default function Home() {
           : images.map((image, index) => {
           const width = image.dimensions?.width ?? 800;
           const height = image.dimensions?.height ?? 600;
-          const alt = image.dimensions?.baseName ?? image.name;
+          const baseName = image.dimensions?.baseName ?? image.name;
+          const galleryContext =
+            currentPage === HOME_PAGE ? "the places we went" : formatGalleryName(currentPage);
+          const alt = `${baseName} — ${galleryContext}`;
           const isAboveFold = index < 6;
 
           return (
@@ -571,7 +574,9 @@ export default function Home() {
               )}
               <Image
                 src={expanded.url}
-                alt={expanded.dimensions?.baseName ?? expanded.name}
+                alt={`${expanded.dimensions?.baseName ?? expanded.name} — ${
+                  currentPage === HOME_PAGE ? "the places we went" : formatGalleryName(currentPage)
+                }`}
                 width={expanded.dimensions?.width ?? 1920}
                 height={expanded.dimensions?.height ?? 1080}
                 className={`max-w-full max-h-[min(80vh,80dvh)] w-auto h-auto object-contain transition-opacity duration-200 [-webkit-user-drag:none] [user-drag:none] ${
