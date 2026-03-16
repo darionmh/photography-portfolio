@@ -106,7 +106,7 @@ function GalleryList({
               ? Array.from({ length: GALLERY_SKELETON_COUNT }, (_, i) => (
                   <div
                     key={i}
-                    className="shrink-0 h-[44px] w-20 rounded-full bg-surface animate-pulse"
+                    className="shrink-0 h-11 w-20 rounded-full bg-surface animate-pulse"
                     aria-hidden
                   />
                 ))
@@ -129,7 +129,7 @@ function GalleryList({
           </div>
           {!showSkeletons && hasOverflow && (
             <div
-              className="absolute right-0 top-0 bottom-2 w-12 flex items-center justify-end gap-1 bg-gradient-to-l from-background via-background/80 to-transparent pointer-events-none"
+              className="absolute right-0 top-0 bottom-2 w-12 flex items-center justify-end gap-1 bg-linear-to-l from-background via-background/80 to-transparent pointer-events-none"
               aria-hidden
             >
               <svg
@@ -167,7 +167,7 @@ function GalleryList({
         ? Array.from({ length: GALLERY_SKELETON_COUNT }, (_, i) => (
             <div
               key={i}
-              className="h-9 w-full max-w-[8rem] rounded-md bg-surface animate-pulse ml-4"
+              className="h-9 w-full max-w-32 rounded-md bg-surface animate-pulse ml-4"
               aria-hidden
             />
           ))
@@ -204,46 +204,44 @@ export default function Home() {
     getCachedImages,
     setCachedImages,
   } = useGalleries();
-  const [images, setImages] = useState<StorageImage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [images, setImages] = useState<StorageImage[]>(() => {
+    const path = currentPage === HOME_PAGE ? "" : currentPage;
+    return getCachedImages(path) ?? [];
+  });
+  const [isLoading, setIsLoading] = useState(() => {
+    const path = currentPage === HOME_PAGE ? "" : currentPage;
+    return getCachedImages(path) === undefined;
+  });
   const [imageStats, setImageStats] = useState<Record<string, { downloads: number; shares: number; metadata?: Record<string, string> }>>({});
   const [expanded, setExpanded] = useState<StorageImage | null>(null);
   const [expandedImageLoaded, setExpandedImageLoaded] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
-  const [showLightboxHint, setShowLightboxHint] = useState(false);
+  const [hintDismissed, setHintDismissed] = useState(() =>
+    typeof localStorage !== "undefined" && !!localStorage.getItem("lightbox_hint_dismissed")
+  );
+
+  // Reset images/loading inline during render on navigation (avoids synchronous setState in effect).
+  const [prevPage, setPrevPage] = useState(currentPage);
+  if (prevPage !== currentPage) {
+    setPrevPage(currentPage);
+    const _path = currentPage === HOME_PAGE ? "" : currentPage;
+    const _cached = getCachedImages(_path);
+    setImages(_cached ?? []);
+    setIsLoading(_cached === undefined);
+  }
+
   const userClosedRef = useRef(false);
   const currentPathRef = useRef<string>("");
-  const expandedPathRef = useRef<string | null>(null);
   const lightboxTriggerRef = useRef<HTMLElement | null>(null);
   const lightboxCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const lightboxRef = useRef<HTMLDivElement | null>(null);
   const touchStartX = useRef<number>(0);
 
-  // Only reset loading when we're showing a different image (by fullPath), not when expanded gets a new object reference
-  useEffect(() => {
-    if (!expanded) {
-      expandedPathRef.current = null;
-      return;
-    }
-    if (expandedPathRef.current !== expanded.fullPath) {
-      expandedPathRef.current = expanded.fullPath;
-      setExpandedImageLoaded(false);
-    }
-  }, [expanded]);
-
   useEffect(() => {
     const path = currentPage === HOME_PAGE ? "" : currentPage;
     currentPathRef.current = path;
 
-    const cached = getCachedImages(path);
-    if (cached !== undefined) {
-      setImages(cached);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setImages([]);
+    if (getCachedImages(path) !== undefined) return;
 
     if (isRecaptchaEnabled()) {
       getRecaptchaToken()
@@ -294,10 +292,7 @@ export default function Home() {
 
   // Fetch download/share counts when images change
   useEffect(() => {
-    if (images.length === 0) {
-      setImageStats({});
-      return;
-    }
+    if (images.length === 0) return;
     const ids = images.map((img) => toResourceId(img.fullPath)).join(",");
     fetch(`/api/image-stats?ids=${encodeURIComponent(ids)}`)
       .then((res) => res.json())
@@ -313,7 +308,7 @@ export default function Home() {
   useEffect(() => {
     if (!imageParam) {
       userClosedRef.current = false;
-      if (expanded) setExpanded(null);
+      if (expanded) startTransition(() => setExpanded(null));
       return;
     }
     if (isLoading) return;
@@ -323,7 +318,7 @@ export default function Home() {
       const match = images.find((img) => img.fullPath === fullPath);
       if (match) {
         // Only update if we're not already showing this image (avoids new reference -> loading reset)
-        setExpanded((prev) => (prev?.fullPath === fullPath ? prev : match));
+        startTransition(() => setExpanded((prev) => (prev?.fullPath === fullPath ? prev : match)));
       } else if (images.length > 0) {
         router.replace(pathname, { scroll: false });
       }
@@ -336,6 +331,7 @@ export default function Home() {
     (image: StorageImage, trigger?: HTMLElement) => {
       lightboxTriggerRef.current = trigger ?? null;
       setExpanded(image);
+      setExpandedImageLoaded(false);
       deferredTrack("lightbox_opened", { gallery: currentPage || "home", path: pathname });
       startTransition(() => {
         router.push(pathWithImage(pathname, toResourceId(image.fullPath)), { scroll: false });
@@ -379,6 +375,7 @@ export default function Home() {
       const next = images[nextIdx];
       if (next) {
         setExpanded(next);
+        setExpandedImageLoaded(false);
         deferredTrack("lightbox_navigate", { direction });
         startTransition(() => {
           router.push(pathWithImage(pathname, toResourceId(next.fullPath)), { scroll: false });
@@ -511,26 +508,20 @@ export default function Home() {
 
   // Lightbox shortcut hint: show once, dismiss on key or after 3s
   useEffect(() => {
-    if (!expanded) {
-      setShowLightboxHint(false);
-      return;
-    }
-    const dismissed = typeof localStorage !== "undefined" && localStorage.getItem("lightbox_hint_dismissed");
-    setShowLightboxHint(!dismissed);
+    if (!expanded || hintDismissed) return;
     const hide = () => {
-      setShowLightboxHint(false);
+      setHintDismissed(true);
       try {
         localStorage.setItem("lightbox_hint_dismissed", "1");
       } catch {}
     };
     const t = setTimeout(hide, 3000);
-    const onKey = () => hide();
-    window.addEventListener("keydown", onKey, { once: true });
+    window.addEventListener("keydown", hide, { once: true });
     return () => {
       clearTimeout(t);
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", hide);
     };
-  }, [expanded]);
+  }, [expanded, hintDismissed]);
 
   const instagramUrl =
     process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? "https://instagram.com";
@@ -593,7 +584,7 @@ export default function Home() {
           ? Array.from({ length: SKELETON_COUNT }, (_, i) => (
               <div
                 key={i}
-                className="aspect-[4/3] w-full bg-surface animate-pulse"
+                className="aspect-4/3 w-full bg-surface animate-pulse"
                 aria-hidden
               />
             ))
@@ -630,7 +621,7 @@ export default function Home() {
             >
               {hasFailed ? (
                 <div
-                  className="aspect-[4/3] w-full bg-surface flex flex-col items-center justify-center gap-2 p-4"
+                  className="aspect-4/3 w-full bg-surface flex flex-col items-center justify-center gap-2 p-4"
                   style={{ minHeight: (height / width) * 200 }}
                 >
                   <span className="text-xs text-muted">Failed to load</span>
@@ -724,6 +715,27 @@ export default function Home() {
                 EXPANDED_MAX_WIDTH
               );
               const ratio = expandedCap.width / expandedCap.height;
+              const rid = toResourceId(expanded.fullPath);
+              const st = imageStats[rid];
+              const meta = st?.metadata ?? {};
+
+              const galleryContext = currentPage === HOME_PAGE ? "the places we went" : formatGalleryName(currentPage);
+              const fallbackAlt = `${expanded.dimensions?.baseName ?? expanded.name} — ${galleryContext}`;
+              const alt = (meta.alt?.trim() ? meta.alt : fallbackAlt) ?? fallbackAlt;
+
+              const caption = meta.caption?.trim();
+              const focal = meta.FocalLength ?? meta.focalLength ?? "";
+              const fNum = meta.FNumber ?? meta.fNumber ?? "";
+              const iso = meta.ISO ?? meta.iso ?? "";
+              const focalStr = focal ? `${focal}${/^\d+$/.test(String(focal)) ? "mm" : ""}` : "";
+              const fStopStr = fNum ? `f/${fNum}` : "";
+              const isoStr = iso ? `ISO ${iso}` : "";
+              const exifParts = [focalStr, fStopStr, isoStr].filter(Boolean);
+              const exifLine = exifParts.length > 0 ? exifParts.join("  ") : null;
+
+              const dc = st?.downloads ?? 0;
+              const sc = st?.shares ?? 0;
+
               return (
                 <div
                   className="relative flex items-center justify-center max-w-full max-h-[min(80vh,80dvh)] select-none"
@@ -744,16 +756,7 @@ export default function Home() {
                   )}
                   <Image
                     src={expanded.url}
-                    alt={
-                      (() => {
-                        const rid = toResourceId(expanded.fullPath);
-                        const st = imageStats[rid];
-                        const fallback = `${expanded.dimensions?.baseName ?? expanded.name} — ${
-                          currentPage === HOME_PAGE ? "the places we went" : formatGalleryName(currentPage)
-                        }`;
-                        return (st?.metadata?.alt?.trim() ? st.metadata.alt : fallback) ?? fallback;
-                      })()
-                    }
+                    alt={alt}
                     width={expandedCap.width}
                     height={expandedCap.height}
                     className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-200 [-webkit-user-drag:none] [user-drag:none] ${
@@ -764,54 +767,29 @@ export default function Home() {
                     draggable={false}
                     onLoad={() => setExpandedImageLoaded(true)}
                   />
-              {showLightboxHint && (
+              {!hintDismissed && (
                 <p className="absolute bottom-0 left-0 translate-y-full text-xs text-background/60 px-4 py-2 lowercase" aria-live="polite">
                   ← → to navigate
                 </p>
               )}
-              {(() => {
-                const rid = toResourceId(expanded.fullPath);
-                const st = imageStats[rid];
-                const meta = st?.metadata ?? {};
-                const caption = meta.caption?.trim();
-                const focal = meta.FocalLength ?? meta.focalLength ?? "";
-                const fNum = meta.FNumber ?? meta.fNumber ?? "";
-                const iso = meta.ISO ?? meta.iso ?? "";
-                const focalStr = focal ? `${focal}${/^\d+$/.test(String(focal)) ? "mm" : ""}` : "";
-                const fStopStr = fNum ? `f/${fNum}` : "";
-                const isoStr = iso ? `ISO ${iso}` : "";
-                const exifParts = [focalStr, fStopStr, isoStr].filter(Boolean);
-                const exifLine = exifParts.length > 0 ? exifParts.join("  ") : null;
-                const hasCaption = !!caption;
-                const hasExif = !!exifLine;
-                if (!hasCaption && !hasExif) return null;
-                return (
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full px-4 py-2 max-w-md text-center space-y-0.5">
-                    {caption ? (
-                      <p className="text-xs text-background/70 lowercase">
-                        {caption}
-                      </p>
-                    ) : null}
-                    {exifLine ? (
-                      <p className="text-xs text-background/60">
-                        {exifLine}
-                      </p>
-                    ) : null}
-                  </div>
-                );
-              })()}
+              {(caption || exifLine) && (
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full px-4 py-2 max-w-md text-center space-y-0.5">
+                  {caption && (
+                    <p className="text-xs text-background/70 lowercase">
+                      {caption}
+                    </p>
+                  )}
+                  {exifLine && (
+                    <p className="text-xs text-background/60">
+                      {exifLine}
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="absolute bottom-0 right-0 translate-y-full flex items-center gap-5 px-4 pt-4 pb-2 touch-manual">
-                {(() => {
-                  const rid = toResourceId(expanded.fullPath);
-                  const st = imageStats[rid];
-                  const dc = st?.downloads ?? 0;
-                  const sc = st?.shares ?? 0;
-                  return (
-                    <span className="text-xs text-background/70 lowercase" aria-label={`${dc} downloads, ${sc} shares`}>
-                      {dc} ↓ · {sc} ↗
-                    </span>
-                  );
-                })()}
+                <span className="text-xs text-background/70 lowercase" aria-label={`${dc} downloads, ${sc} shares`}>
+                  {dc} ↓ · {sc} ↗
+                </span>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -861,7 +839,7 @@ export default function Home() {
             ref={lightboxCloseButtonRef}
             type="button"
             onClick={closeExpanded}
-            className="absolute z-10 flex items-center justify-center min-w-[44px] min-h-[44px] p-2 text-background/90 hover:bg-background/10 hover:text-background active:bg-background/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-background rounded-full touch-manual cursor-pointer"
+            className="absolute z-10 flex items-center justify-center min-w-11 min-h-11 p-2 text-background/90 hover:bg-background/10 hover:text-background active:bg-background/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-background rounded-full touch-manual cursor-pointer"
             style={{
               top: "max(0.75rem, env(safe-area-inset-top))",
               right: "max(0.75rem, env(safe-area-inset-right))",

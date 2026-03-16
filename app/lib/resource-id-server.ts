@@ -1,5 +1,6 @@
 /**
- * Server-only: encode storage path to URL-safe resource id (same algorithm as client resource-id.ts).
+ * Server-only: encode storage path to URL-safe resource id.
+ * Produces the same output as client resource-id.ts — both base64-encode the UTF-8 bytes of the path.
  */
 
 export function toResourceId(fullPath: string): string {

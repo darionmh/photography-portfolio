@@ -1,13 +1,9 @@
 import { getImagesInPath } from "@/app/lib/firebase-admin";
+import { toResourceId } from "@/app/lib/resource-id-server";
 
 const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://theplaceswewent.com").replace(/\/$/, "");
 const RSS_MAX_ITEMS = 20;
 const RSS_IMAGE_WIDTH = 1200;
-
-function toResourceId(fullPath: string): string {
-  const base64 = Buffer.from(unescape(encodeURIComponent(fullPath)), "binary").toString("base64");
-  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
 
 function escapeXml(s: string): string {
   return s
