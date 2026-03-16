@@ -659,8 +659,7 @@ export default function Home() {
                   className="w-full h-auto object-cover cursor-pointer pointer-events-none"
                   sizes={index === 0 ? "100vw" : "(max-width: 640px) 50vw, 33vw"}
                   draggable={false}
-                  {...(isAboveFold ? { loading: 'eager' } : { loading: "lazy" })}
-                  {...(index < 3 ? { fetchPriority: "high" as const } : {})}
+                  {...(isAboveFold ? { priority: true } : { loading: "lazy" })}
                   onError={() => setFailedImages((prev) => new Set(prev).add(image.fullPath))}
                 />
               )}
