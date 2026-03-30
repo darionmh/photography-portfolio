@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import GalleryImage from "../components/GalleryImage";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, startTransition } from "react";
 import { track } from "@vercel/analytics";
@@ -641,7 +641,7 @@ export default function Home() {
                   </button>
                 </div>
               ) : (
-                <Image
+                <GalleryImage
                   src={image.url}
                   alt={alt}
                   width={width}
@@ -754,7 +754,7 @@ export default function Home() {
                       aria-hidden
                     />
                   )}
-                  <Image
+                  <GalleryImage
                     src={expanded.url}
                     alt={alt}
                     width={expandedCap.width}
