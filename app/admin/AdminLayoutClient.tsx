@@ -67,6 +67,12 @@ export default function AdminLayoutClient({
           >
             dashboard
           </Link>
+          <Link
+            href="/admin/analytics"
+            className="text-muted hover:text-foreground"
+          >
+            analytics
+          </Link>
           <Link href="/" className="text-muted hover:text-foreground">
             view site
           </Link>

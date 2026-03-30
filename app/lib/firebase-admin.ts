@@ -29,6 +29,7 @@ export interface StorageImageServer {
 }
 
 const IMAGE_STATS_COLLECTION = "imageStats";
+const ANALYTICS_EVENTS_COLLECTION = "analyticsEvents";
 
 function ensureAdmin() {
   if (!admin.apps.length) {
@@ -65,7 +66,7 @@ export function getFirestore() {
   return admin.firestore();
 }
 
-export { IMAGE_STATS_COLLECTION };
+export { IMAGE_STATS_COLLECTION, ANALYTICS_EVENTS_COLLECTION };
 
 function parseDimensions(name: string): ParsedDimensions | null {
   const match = name.match(DIMENSIONS_REGEX);

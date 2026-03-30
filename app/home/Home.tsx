@@ -3,7 +3,7 @@
 import GalleryImage from "../components/GalleryImage";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, startTransition } from "react";
-import { track } from "@vercel/analytics";
+import { deferredTrack } from "@/app/lib/analytics";
 import { useGalleries } from "../contexts/GalleriesContext";
 import { HOME_PAGE, pathForGallery, formatGalleryName } from "../lib/galleries";
 import { getRecaptchaToken, isRecaptchaEnabled } from "../lib/recaptcha";
@@ -12,14 +12,6 @@ import { getImagesFromStorage, type StorageImage } from "../lib/storage";
 const SKELETON_COUNT = 6;
 const IMAGE_PARAM = "image";
 
-/** Defer analytics to after next paint to keep interaction handlers fast (INP). */
-function deferredTrack(...args: Parameters<typeof track>) {
-  if (typeof requestAnimationFrame !== "undefined") {
-    requestAnimationFrame(() => track(...args));
-  } else {
-    track(...args);
-  }
-}
 
 /** Max width for gallery thumbnails; Next.js will serve at or below this. */
 const GALLERY_MAX_WIDTH = 640;
