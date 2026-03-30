@@ -48,14 +48,12 @@ export default function Header() {
               </span>
             )}
           </div>
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="text-xs text-muted tracking-wide">photography by darion</span>
-            {currentPage !== HOME_PAGE && (
-              <span className="lg:hidden text-xs text-muted/90 tracking-wide truncate lowercase" aria-label={`Viewing gallery: ${formatGalleryName(currentPage)}`}>
-                / {formatGalleryName(currentPage)}
-              </span>
-            )}
-          </div>
+          <span className="text-xs text-muted tracking-wide">photography by darion</span>
+          {currentPage !== HOME_PAGE && (
+            <span className="lg:hidden text-xs text-muted/90 tracking-wide truncate lowercase" aria-label={`Viewing gallery: ${formatGalleryName(currentPage)}`}>
+              / {formatGalleryName(currentPage)}
+            </span>
+          )}
         </div>
         {/* Right group: Home + Galleries (small viewports) + Instagram */}
         <div className="flex items-center gap-5 sm:gap-6 lowercase shrink-0">
