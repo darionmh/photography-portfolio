@@ -12,6 +12,7 @@ export default function Header() {
     process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? "https://instagram.com";
   const pathname = usePathname();
   const currentPage = pathname === "/" ? HOME_PAGE : pathname.slice(1);
+  const pageLabel = formatGalleryName(currentPage.split("/")[0]);
   const { galleries, galleriesLoading } = useGalleries();
   const [galleriesOpen, setGalleriesOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -44,14 +45,14 @@ export default function Header() {
             </h1>
             {currentPage !== HOME_PAGE && (
               <span className="hidden lg:inline text-sm text-muted/90 tracking-wide truncate lowercase" aria-label={`Viewing gallery: ${formatGalleryName(currentPage)}`}>
-                / {formatGalleryName(currentPage)}
+                / {pageLabel}
               </span>
             )}
           </div>
           <span className="text-xs text-muted tracking-wide">photography by darion</span>
           {currentPage !== HOME_PAGE && (
             <span className="lg:hidden text-xs text-muted/90 tracking-wide truncate lowercase" aria-label={`Viewing gallery: ${formatGalleryName(currentPage)}`}>
-              / {formatGalleryName(currentPage)}
+              / {pageLabel}
             </span>
           )}
         </div>

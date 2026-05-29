@@ -2,7 +2,13 @@
 
 import GalleryImage from "../components/GalleryImage";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, startTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  startTransition,
+} from "react";
 import { deferredTrack } from "@/app/lib/analytics";
 import { useGalleries } from "../contexts/GalleriesContext";
 import { HOME_PAGE, pathForGallery, formatGalleryName } from "../lib/galleries";
@@ -11,7 +17,7 @@ import { getImagesFromStorage, type StorageImage } from "../lib/storage";
 
 const SKELETON_COUNT = 6;
 const IMAGE_PARAM = "image";
-
+const FOR_SALE_PARAM = "forsale";
 
 /** Max width for gallery thumbnails; Next.js will serve at or below this. */
 const GALLERY_MAX_WIDTH = 640;
@@ -21,7 +27,7 @@ const EXPANDED_MAX_WIDTH = 1600;
 function capDimensions(
   width: number,
   height: number,
-  maxWidth: number
+  maxWidth: number,
 ): { width: number; height: number } {
   if (width <= maxWidth) return { width, height };
   const scale = maxWidth / width;
@@ -30,9 +36,19 @@ function capDimensions(
 
 import { toResourceId, fromResourceId } from "@/app/lib/resource-id";
 
-function pathWithImage(pathname: string, resourceId: string | null): string {
-  if (resourceId == null) return pathname;
-  return `${pathname}?${IMAGE_PARAM}=${resourceId}`;
+function pathWithImage(
+  pathname: string,
+  resourceId: string | null,
+  currentParams: URLSearchParams,
+): string {
+  const params = new URLSearchParams(currentParams);
+  if (resourceId == null) {
+    params.delete(IMAGE_PARAM);
+  } else {
+    params.set(IMAGE_PARAM, resourceId);
+  }
+  const qs = params.toString();
+  return qs ? `${pathname}?${qs}` : pathname;
 }
 
 const GALLERY_SKELETON_COUNT = 5;
@@ -56,8 +72,7 @@ function GalleryList({
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const check = () =>
-      setHasOverflow(el.scrollWidth > el.clientWidth);
+    const check = () => setHasOverflow(el.scrollWidth > el.clientWidth);
     check();
     const ro = new ResizeObserver(check);
     ro.observe(el);
@@ -68,9 +83,9 @@ function GalleryList({
 
   const baseTouch =
     "min-h-[44px] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted transition-colors font-medium text-sm";
-  const activeClass = "underline underline-offset-4 decoration-2 text-foreground";
-  const inactiveClass =
-    "text-muted hover:text-foreground/80";
+  const activeClass =
+    "underline underline-offset-4 decoration-2 text-foreground";
+  const inactiveClass = "text-muted hover:text-foreground/80";
 
   const homeActive = currentPage === HOME_PAGE;
   const homeClass = homeActive ? activeClass : inactiveClass;
@@ -189,13 +204,10 @@ export default function Home() {
   const searchParams = useSearchParams();
   const currentPage = pathname === "/" ? HOME_PAGE : pathname.slice(1);
   const imageParam = searchParams.get(IMAGE_PARAM);
+  const showForSaleOnly = searchParams.get(FOR_SALE_PARAM) === "1";
 
-  const {
-    galleries,
-    galleriesLoading,
-    getCachedImages,
-    setCachedImages,
-  } = useGalleries();
+  const { galleries, galleriesLoading, getCachedImages, setCachedImages } =
+    useGalleries();
   const [images, setImages] = useState<StorageImage[]>(() => {
     const path = currentPage === HOME_PAGE ? "" : currentPage;
     return getCachedImages(path) ?? [];
@@ -204,12 +216,19 @@ export default function Home() {
     const path = currentPage === HOME_PAGE ? "" : currentPage;
     return getCachedImages(path) === undefined;
   });
-  const [imageStats, setImageStats] = useState<Record<string, { downloads: number; shares: number; metadata?: Record<string, string> }>>({});
+  const [imageStats, setImageStats] = useState<
+    Record<
+      string,
+      { downloads: number; shares: number; metadata?: Record<string, string> }
+    >
+  >({});
   const [expanded, setExpanded] = useState<StorageImage | null>(null);
   const [expandedImageLoaded, setExpandedImageLoaded] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
-  const [hintDismissed, setHintDismissed] = useState(() =>
-    typeof localStorage !== "undefined" && !!localStorage.getItem("lightbox_hint_dismissed")
+  const [hintDismissed, setHintDismissed] = useState(
+    () =>
+      typeof localStorage !== "undefined" &&
+      !!localStorage.getItem("lightbox_hint_dismissed"),
   );
 
   // Reset images/loading inline during render on navigation (avoids synchronous setState in effect).
@@ -277,7 +296,7 @@ export default function Home() {
         () => {
           if (currentPathRef.current !== path) return;
           setIsLoading(false);
-        }
+        },
       );
     }
   }, [currentPage, getCachedImages, setCachedImages]);
@@ -310,7 +329,9 @@ export default function Home() {
       const match = images.find((img) => img.fullPath === fullPath);
       if (match) {
         // Only update if we're not already showing this image (avoids new reference -> loading reset)
-        startTransition(() => setExpanded((prev) => (prev?.fullPath === fullPath ? prev : match)));
+        startTransition(() =>
+          setExpanded((prev) => (prev?.fullPath === fullPath ? prev : match)),
+        );
       } else if (images.length > 0) {
         router.replace(pathname, { scroll: false });
       }
@@ -324,22 +345,29 @@ export default function Home() {
       lightboxTriggerRef.current = trigger ?? null;
       setExpanded(image);
       setExpandedImageLoaded(false);
-      deferredTrack("lightbox_opened", { gallery: currentPage || "home", path: pathname });
+      deferredTrack("lightbox_opened", {
+        gallery: currentPage || "home",
+        path: pathname,
+      });
       startTransition(() => {
-        router.push(pathWithImage(pathname, toResourceId(image.fullPath)), { scroll: false });
+        router.push(pathWithImage(pathname, toResourceId(image.fullPath), searchParams), {
+          scroll: false,
+        });
       });
     },
-    [router, pathname, currentPage]
+    [router, pathname, currentPage, searchParams],
   );
 
   const selectGallery = useCallback(
     (page: string) => {
-      deferredTrack("gallery_selected", { gallery: page === HOME_PAGE ? "home" : page });
+      deferredTrack("gallery_selected", {
+        gallery: page === HOME_PAGE ? "home" : page,
+      });
       startTransition(() => {
         router.push(pathForGallery(page), { scroll: false });
       });
     },
-    [router]
+    [router],
   );
 
   const closeExpanded = useCallback(() => {
@@ -352,11 +380,12 @@ export default function Home() {
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
-      window.history.replaceState(null, "", pathname);
-      router.replace(pathname, { scroll: false });
+      const closedPath = pathWithImage(pathname, null, searchParams);
+      window.history.replaceState(null, "", closedPath);
+      router.replace(closedPath, { scroll: false });
       if (trigger?.focus) setTimeout(() => trigger.focus(), 0);
     });
-  }, [router, pathname]);
+  }, [router, pathname, searchParams]);
 
   const goToAdjacent = useCallback(
     (direction: "prev" | "next") => {
@@ -370,11 +399,13 @@ export default function Home() {
         setExpandedImageLoaded(false);
         deferredTrack("lightbox_navigate", { direction });
         startTransition(() => {
-          router.push(pathWithImage(pathname, toResourceId(next.fullPath)), { scroll: false });
+          router.push(pathWithImage(pathname, toResourceId(next.fullPath), searchParams), {
+            scroll: false,
+          });
         });
       }
     },
-    [expanded, images, pathname, router]
+    [expanded, images, pathname, router, searchParams],
   );
 
   const recordImageAction = useCallback(
@@ -386,7 +417,10 @@ export default function Home() {
       })
         .then((res) => res.json())
         .then((data) => {
-          if (typeof data?.downloads === "number" && typeof data?.shares === "number") {
+          if (
+            typeof data?.downloads === "number" &&
+            typeof data?.shares === "number"
+          ) {
             setImageStats((prev) => ({
               ...prev,
               [resourceId]: { downloads: data.downloads, shares: data.shares },
@@ -395,7 +429,7 @@ export default function Home() {
         })
         .catch(() => {});
     },
-    []
+    [],
   );
 
   const handleDownload = useCallback(
@@ -419,7 +453,7 @@ export default function Home() {
           window.open(expanded.url, "_blank", "noopener,noreferrer");
         });
     },
-    [expanded, currentPage, recordImageAction]
+    [expanded, currentPage, recordImageAction],
   );
 
   const handleShare = useCallback(
@@ -428,7 +462,8 @@ export default function Home() {
       if (!expanded) return;
       deferredTrack("image_shared", { gallery: currentPage || "home" });
       recordImageAction(toResourceId(expanded.fullPath), "share");
-      const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+      const shareUrl =
+        typeof window !== "undefined" ? window.location.href : "";
       const title = expanded.dimensions?.baseName ?? expanded.name;
       if (typeof navigator !== "undefined" && navigator.share) {
         navigator
@@ -441,7 +476,7 @@ export default function Home() {
         navigator.clipboard?.writeText(shareUrl).catch(() => {});
       }
     },
-    [expanded, currentPage, recordImageAction]
+    [expanded, currentPage, recordImageAction],
   );
 
   useEffect(() => {
@@ -458,12 +493,18 @@ export default function Home() {
       if (e.key === "Tab") {
         const dialog = lightboxCloseButtonRef.current?.closest("[role=dialog]");
         if (!dialog) return;
-        const focusable = Array.from(dialog.querySelectorAll<HTMLElement>("button, [href]")).filter(
-          (el) => !el.hasAttribute("disabled") && el.tabIndex !== -1
-        );
+        const focusable = Array.from(
+          dialog.querySelectorAll<HTMLElement>("button, [href]"),
+        ).filter((el) => !el.hasAttribute("disabled") && el.tabIndex !== -1);
         if (focusable.length === 0) return;
         const i = focusable.indexOf(document.activeElement as HTMLElement);
-        const nextI = e.shiftKey ? (i <= 0 ? focusable.length - 1 : i - 1) : (i >= focusable.length - 1 ? 0 : i + 1);
+        const nextI = e.shiftKey
+          ? i <= 0
+            ? focusable.length - 1
+            : i - 1
+          : i >= focusable.length - 1
+            ? 0
+            : i + 1;
         e.preventDefault();
         focusable[nextI]?.focus();
       }
@@ -529,16 +570,21 @@ export default function Home() {
               className="mb-8 pb-8 border-b border-border/80"
               aria-labelledby="about-heading"
             >
-              <h2 id="about-heading" className="text-lg font-medium tracking-tight text-foreground mb-3 lowercase">
+              <h2
+                id="about-heading"
+                className="text-lg font-medium tracking-tight text-foreground mb-3 lowercase"
+              >
                 About
               </h2>
               <p className="text-muted text-sm leading-relaxed max-w-xl">
                 Landscapes, wildlife, architecture, whatever the road turns up.
-                I like the mix of big sky and small detail, the planned stop and the turn we didn’t expect.
+                I like the mix of big sky and small detail, the planned stop and
+                the turn we didn’t expect.
               </p>
               <p className="text-muted text-sm leading-relaxed max-w-xl mt-4">
-                Photography turns experience into something you can return to and share. It’s a way to look twice, and proof that we were here.
-                The places we went, and what stuck.
+                Photography turns experience into something you can return to
+                and share. It’s a way to look twice, and proof that we were
+                here. The places we went, and what stuck.
               </p>
               <p className="text-sm text-foreground mt-4">
                 Follow for more, or reach out{" "}
@@ -546,7 +592,9 @@ export default function Home() {
                   href={instagramUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => deferredTrack("instagram_clicked", { location: "about" })}
+                  onClick={() =>
+                    deferredTrack("instagram_clicked", { location: "about" })
+                  }
                   className="font-medium text-foreground hover:text-muted underline-offset-4 hover:underline transition-colors cursor-pointer"
                 >
                   @the_places_we_went
@@ -559,105 +607,208 @@ export default function Home() {
                       href={buyMeACoffeeUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={() => deferredTrack("buymeacoffee_clicked", { location: "about" })}
+                      onClick={() =>
+                        deferredTrack("buymeacoffee_clicked", {
+                          location: "about",
+                        })
+                      }
                       className="font-medium text-foreground hover:text-muted underline-offset-4 hover:underline transition-colors cursor-pointer"
                     >
                       buy me a coffee
-                    </a>
-                    {" "}
+                    </a>{" "}
                     if you’d like to support the work.
                   </>
                 )}
               </p>
             </section>
           )}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {isLoading
-          ? Array.from({ length: SKELETON_COUNT }, (_, i) => (
-              <div
-                key={i}
-                className="aspect-4/3 w-full bg-surface animate-pulse"
-                aria-hidden
-              />
-            ))
-          : images.length === 0
-          ? (
-              <p className="col-span-full text-sm text-muted py-8 text-center">
-                No images in this gallery yet.
-              </p>
-            )
-          : images.map((image, index) => {
-          const intrinsicW = image.dimensions?.width ?? 800;
-          const intrinsicH = image.dimensions?.height ?? 600;
-          const { width, height } = capDimensions(intrinsicW, intrinsicH, GALLERY_MAX_WIDTH);
-          const baseName = image.dimensions?.baseName ?? image.name;
-          const galleryContext =
-            currentPage === HOME_PAGE ? "the places we went" : formatGalleryName(currentPage);
-          const defaultAlt = `${baseName} — ${galleryContext}`;
-          const rid = toResourceId(image.fullPath);
-          const stats = imageStats[rid];
-          const alt = (stats?.metadata?.alt?.trim() ? stats.metadata.alt : defaultAlt) ?? defaultAlt;
-          const isAboveFold = index < 6;
-          const d = stats?.downloads ?? 0;
-          const s = stats?.shares ?? 0;
-          const hasStats = d > 0 || s > 0;
-          const hasFailed = failedImages.has(image.fullPath);
+          {(() => {
+            const forSaleIds = new Set(
+              Object.entries(imageStats)
+                .filter(([, s]) => s.metadata?.printfulProductId)
+                .map(([id]) => id),
+            );
+            const displayImages = showForSaleOnly
+              ? images.filter((img) =>
+                  forSaleIds.has(toResourceId(img.fullPath)),
+                )
+              : images;
 
-          return (
-            <button
-              key={image.fullPath}
-              type="button"
-              onClick={(e) => !hasFailed && openExpanded(image, e.currentTarget)}
-              onContextMenu={(e) => e.preventDefault()}
-              className="block w-full text-left overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted select-none relative"
-            >
-              {hasFailed ? (
-                <div
-                  className="aspect-4/3 w-full bg-surface flex flex-col items-center justify-center gap-2 p-4"
-                  style={{ minHeight: (height / width) * 200 }}
-                >
-                  <span className="text-xs text-muted">Failed to load</span>
-                  <button
-                    type="button"
+            const toggleHref = showForSaleOnly
+              ? pathname
+              : `${pathname}?${FOR_SALE_PARAM}=1`;
+
+            return (
+              <>
+                <div className="mb-4 flex items-center gap-2">
+                  <a
+                    href={toggleHref}
                     onClick={(e) => {
-                      e.stopPropagation();
-                      setFailedImages((prev) => {
-                        const next = new Set(prev);
-                        next.delete(image.fullPath);
-                        return next;
+                      e.preventDefault();
+                      startTransition(() => {
+                        router.push(toggleHref, { scroll: false });
                       });
                     }}
-                    className="text-xs font-medium text-foreground underline underline-offset-2 hover:text-muted"
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-muted lowercase ${
+                      showForSaleOnly
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-transparent text-muted border-border hover:border-foreground/40 hover:text-foreground"
+                    }`}
                   >
-                    Retry
-                  </button>
+                    <svg
+                      width="11"
+                      height="11"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    >
+                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                      <line x1="7" y1="7" x2="7.01" y2="7" />
+                    </svg>
+                    available to purchase
+                  </a>
                 </div>
-              ) : (
-                <GalleryImage
-                  src={image.url}
-                  alt={alt}
-                  width={width}
-                  height={height}
-                  title={stats?.metadata?.title?.trim() || `${image.name} (${(image.size / 1024).toFixed(1)} KB). Click to expand`}
-                  className="w-full h-auto object-cover cursor-pointer pointer-events-none"
-                  sizes={index === 0 ? "100vw" : "(max-width: 640px) 50vw, 33vw"}
-                  draggable={false}
-                  {...(isAboveFold ? { priority: true } : { loading: "lazy" })}
-                  onError={() => setFailedImages((prev) => new Set(prev).add(image.fullPath))}
-                />
-              )}
-              {hasStats && !hasFailed && (
-                <span
-                  className="absolute bottom-1 left-1 right-1 text-[10px] text-white/90 bg-black/40 px-1.5 py-0.5 rounded lowercase"
-                  aria-label={`${d} downloads, ${s} shares`}
-                >
-                  {d} ↓ · {s} ↗
-                </span>
-              )}
-            </button>
-          );
-            })}
-          </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {isLoading ? (
+                    Array.from({ length: SKELETON_COUNT }, (_, i) => (
+                      <div
+                        key={i}
+                        className="aspect-4/3 w-full bg-surface animate-pulse"
+                        aria-hidden
+                      />
+                    ))
+                  ) : displayImages.length === 0 ? (
+                    <p className="col-span-full text-sm text-muted py-8 text-center">
+                      {showForSaleOnly
+                        ? "No prints available in this gallery."
+                        : "No images in this gallery yet."}
+                    </p>
+                  ) : (
+                    displayImages.map((image, index) => {
+                      const intrinsicW = image.dimensions?.width ?? 800;
+                      const intrinsicH = image.dimensions?.height ?? 600;
+                      const { width, height } = capDimensions(
+                        intrinsicW,
+                        intrinsicH,
+                        GALLERY_MAX_WIDTH,
+                      );
+                      const baseName = image.dimensions?.baseName ?? image.name;
+                      const galleryContext =
+                        currentPage === HOME_PAGE
+                          ? "the places we went"
+                          : formatGalleryName(currentPage);
+                      const defaultAlt = `${baseName} — ${galleryContext}`;
+                      const rid = toResourceId(image.fullPath);
+                      const stats = imageStats[rid];
+                      const alt =
+                        (stats?.metadata?.alt?.trim()
+                          ? stats.metadata.alt
+                          : defaultAlt) ?? defaultAlt;
+                      const isAboveFold = index < 6;
+                      const d = stats?.downloads ?? 0;
+                      const s = stats?.shares ?? 0;
+                      const hasStats = d > 0 || s > 0;
+                      const hasFailed = failedImages.has(image.fullPath);
+                      const isForSale = !!stats?.metadata?.printfulProductId;
+
+                      return (
+                        <button
+                          key={image.fullPath}
+                          type="button"
+                          onClick={(e) =>
+                            !hasFailed && openExpanded(image, e.currentTarget)
+                          }
+                          onContextMenu={(e) => e.preventDefault()}
+                          className="block w-full text-left overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-muted select-none relative"
+                        >
+                          {hasFailed ? (
+                            <div
+                              className="aspect-4/3 w-full bg-surface flex flex-col items-center justify-center gap-2 p-4"
+                              style={{ minHeight: (height / width) * 200 }}
+                            >
+                              <span className="text-xs text-muted">
+                                Failed to load
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFailedImages((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(image.fullPath);
+                                    return next;
+                                  });
+                                }}
+                                className="text-xs font-medium text-foreground underline underline-offset-2 hover:text-muted"
+                              >
+                                Retry
+                              </button>
+                            </div>
+                          ) : (
+                            <GalleryImage
+                              src={image.url}
+                              alt={alt}
+                              width={width}
+                              height={height}
+                              title={
+                                stats?.metadata?.title?.trim() ||
+                                `${image.name} (${(image.size / 1024).toFixed(1)} KB). Click to expand`
+                              }
+                              className="w-full h-auto object-cover cursor-pointer pointer-events-none"
+                              sizes={
+                                index === 0
+                                  ? "100vw"
+                                  : "(max-width: 640px) 50vw, 33vw"
+                              }
+                              draggable={false}
+                              {...(isAboveFold
+                                ? { priority: true }
+                                : { loading: "lazy" })}
+                              onError={() =>
+                                setFailedImages((prev) =>
+                                  new Set(prev).add(image.fullPath),
+                                )
+                              }
+                            />
+                          )}
+                          {(hasStats || isForSale) && !hasFailed && (
+                            <span
+                              className="absolute bottom-1 left-1 right-1 flex items-center justify-between text-[10px] text-white/90 bg-black/40 px-1.5 py-0.5 rounded lowercase"
+                              aria-label={`${d} downloads, ${s} shares`}
+                            >
+                              <span>
+                                {d} ↓ · {s} ↗
+                              </span>
+                              {isForSale && (
+                                <svg
+                                  width="11"
+                                  height="11"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden
+                                >
+                                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                                  <line x1="7" y1="7" x2="7.01" y2="7" />
+                                </svg>
+                              )}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </div>
         <aside
           className="hidden lg:block lg:shrink-0 lg:w-48 lg:sticky lg:top-24 lg:self-start"
@@ -704,31 +855,39 @@ export default function Home() {
               const expandedCap = capDimensions(
                 expanded.dimensions?.width ?? 1920,
                 expanded.dimensions?.height ?? 1080,
-                EXPANDED_MAX_WIDTH
+                EXPANDED_MAX_WIDTH,
               );
               const ratio = expandedCap.width / expandedCap.height;
               const rid = toResourceId(expanded.fullPath);
               const st = imageStats[rid];
               const meta = st?.metadata ?? {};
 
-              const galleryContext = currentPage === HOME_PAGE ? "the places we went" : formatGalleryName(currentPage);
+              const galleryContext =
+                currentPage === HOME_PAGE
+                  ? "the places we went"
+                  : formatGalleryName(currentPage);
               const fallbackAlt = `${expanded.dimensions?.baseName ?? expanded.name} — ${galleryContext}`;
-              const alt = (meta.alt?.trim() ? meta.alt : fallbackAlt) ?? fallbackAlt;
+              const alt =
+                (meta.alt?.trim() ? meta.alt : fallbackAlt) ?? fallbackAlt;
 
               const caption = meta.caption?.trim();
               const focal = meta.FocalLength ?? meta.focalLength ?? "";
               const fNum = meta.FNumber ?? meta.fNumber ?? "";
               const iso = meta.ISO ?? meta.iso ?? "";
-              const focalStr = focal ? `${focal}${/^\d+$/.test(String(focal)) ? "mm" : ""}` : "";
+              const focalStr = focal
+                ? `${focal}${/^\d+$/.test(String(focal)) ? "mm" : ""}`
+                : "";
               const fStopStr = fNum ? `f/${fNum}` : "";
               const isoStr = iso ? `ISO ${iso}` : "";
               const exifParts = [focalStr, fStopStr, isoStr].filter(Boolean);
-              const exifLine = exifParts.length > 0 ? exifParts.join("  ") : null;
+              const exifLine =
+                exifParts.length > 0 ? exifParts.join("  ") : null;
 
               const dc = st?.downloads ?? 0;
               const sc = st?.shares ?? 0;
 
               return (
+                <>
                 <div
                   className="relative flex items-center justify-center max-w-full max-h-[min(80vh,80dvh)] select-none"
                   style={{
@@ -759,71 +918,122 @@ export default function Home() {
                     draggable={false}
                     onLoad={() => setExpandedImageLoaded(true)}
                   />
-              {!hintDismissed && (
-                <p className="absolute bottom-0 left-0 translate-y-full text-xs text-background/60 px-4 py-2 lowercase" aria-live="polite">
-                  ← → to navigate
-                </p>
-              )}
-              {(caption || exifLine) && (
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full px-4 py-2 max-w-md text-center space-y-0.5">
-                  {caption && (
-                    <p className="text-xs text-background/70 lowercase">
-                      {caption}
+                  {!hintDismissed && (
+                    <p
+                      className="absolute bottom-0 left-0 translate-y-full text-xs text-background/60 px-4 py-2 lowercase"
+                      aria-live="polite"
+                    >
+                      ← → to navigate
                     </p>
                   )}
-                  {exifLine && (
-                    <p className="text-xs text-background/60">
-                      {exifLine}
-                    </p>
+                  {(caption || exifLine) && (
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full px-4 py-2 max-w-md text-center space-y-0.5">
+                      {caption && (
+                        <p className="text-xs text-background/70 lowercase">
+                          {caption}
+                        </p>
+                      )}
+                      {exifLine && (
+                        <p className="text-xs text-background/60">{exifLine}</p>
+                      )}
+                    </div>
                   )}
+                  <div className="absolute bottom-0 right-0 translate-y-full flex items-center gap-5 px-4 pt-4 pb-2 touch-manual">
+                    <span
+                      className="text-xs text-background/70 lowercase"
+                      aria-label={`${dc} downloads, ${sc} shares`}
+                    >
+                      {dc} ↓ · {sc} ↗
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        lightboxRef.current
+                          ?.requestFullscreen?.()
+                          .catch(() => {});
+                      }}
+                      className="flex items-center justify-center w-9 h-9 rounded-full text-background/90 bg-background/10 hover:bg-background/20 active:bg-background/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-background cursor-pointer"
+                      aria-label="Fullscreen"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                        <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+                        <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                        <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDownload}
+                      className="flex items-center justify-center w-9 h-9 rounded-full text-background/90 bg-background/10 hover:bg-background/20 active:bg-background/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-background cursor-pointer"
+                      aria-label="Download"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" x2="12" y1="15" y2="3" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleShare}
+                      className="flex items-center justify-center w-9 h-9 rounded-full text-background/90 bg-background/10 hover:bg-background/20 active:bg-background/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-background cursor-pointer"
+                      aria-label="Share"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                        <polyline points="16 6 12 2 8 6" />
+                        <line x1="12" x2="12" y1="2" y2="15" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-              )}
-              <div className="absolute bottom-0 right-0 translate-y-full flex items-center gap-5 px-4 pt-4 pb-2 touch-manual">
-                <span className="text-xs text-background/70 lowercase" aria-label={`${dc} downloads, ${sc} shares`}>
-                  {dc} ↓ · {sc} ↗
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    lightboxRef.current?.requestFullscreen?.().catch(() => {});
-                  }}
-                  className="flex items-center justify-center w-9 h-9 rounded-full text-background/90 bg-background/10 hover:bg-background/20 active:bg-background/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-background cursor-pointer"
-                  aria-label="Fullscreen"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M8 3H5a2 2 0 0 0-2 2v3" />
-                    <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
-                    <path d="M3 16v3a2 2 0 0 0 2 2h3" />
-                    <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDownload}
-                  className="flex items-center justify-center w-9 h-9 rounded-full text-background/90 bg-background/10 hover:bg-background/20 active:bg-background/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-background cursor-pointer"
-                  aria-label="Download"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" x2="12" y1="15" y2="3" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleShare}
-                  className="flex items-center justify-center w-9 h-9 rounded-full text-background/90 bg-background/10 hover:bg-background/20 active:bg-background/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-background cursor-pointer"
-                  aria-label="Share"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                    <polyline points="16 6 12 2 8 6" />
-                    <line x1="12" x2="12" y1="2" y2="15" />
-                  </svg>
-                </button>
-              </div>
-                </div>
+                {meta.printfulProductId && (
+                  <a
+                    href={`/prints/${meta.printfulProductId}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute z-10 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-background text-foreground text-sm font-medium lowercase shadow-lg hover:bg-background/90 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-background"
+                    style={{ bottom: "max(1.5rem, env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)" }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                      <line x1="7" y1="7" x2="7.01" y2="7" />
+                    </svg>
+                    view listing
+                  </a>
+                )}
+                </>
               );
             })()}
           </div>
@@ -838,7 +1048,18 @@ export default function Home() {
             }}
             aria-label="Close (Escape)"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="shrink-0"
+            >
               <path d="M18 6 6 18" />
               <path d="m6 6 12 12" />
             </svg>
