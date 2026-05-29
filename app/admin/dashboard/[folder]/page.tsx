@@ -21,7 +21,8 @@ type ImageMeta = Record<string, string>;
 export default function ManageGalleryPage() {
   const params = useParams();
   const router = useRouter();
-  const folder = typeof params.folder === "string" ? decodeURIComponent(params.folder) : "";
+  const folder =
+    typeof params.folder === "string" ? decodeURIComponent(params.folder) : "";
   const [images, setImages] = useState<AdminImage[]>([]);
   const [imagesLoading, setImagesLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -29,19 +30,31 @@ export default function ManageGalleryPage() {
   const [renaming, setRenaming] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
   const nextIdRef = useRef(0);
-  const [pendingFiles, setPendingFiles] = useState<{ id: number; file: File }[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<
+    { id: number; file: File }[]
+  >([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [fileInputKey, setFileInputKey] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [uploadMessage, setUploadMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [uploadMessage, setUploadMessage] = useState<{
+    ok: boolean;
+    text: string;
+  } | null>(null);
   const [deletingGallery, setDeletingGallery] = useState(false);
-  const [deleteGalleryError, setDeleteGalleryError] = useState<string | null>(null);
+  const [deleteGalleryError, setDeleteGalleryError] = useState<string | null>(
+    null,
+  );
   const [metadata, setMetadata] = useState<Record<string, ImageMeta>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingImage, setEditingImage] = useState<{ fullPath: string; name: string } | null>(null);
+  const [editingImage, setEditingImage] = useState<{
+    fullPath: string;
+    name: string;
+  } | null>(null);
   const [editFilename, setEditFilename] = useState("");
-  const [editForm, setEditForm] = useState<{ key: string; value: string }[]>([]);
+  const [editForm, setEditForm] = useState<{ key: string; value: string }[]>(
+    [],
+  );
   const [savingMeta, setSavingMeta] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
 
@@ -54,7 +67,7 @@ export default function ManageGalleryPage() {
       const token = await user.getIdToken();
       const res = await fetch(
         `/api/admin/images?path=${encodeURIComponent(folder)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
@@ -93,7 +106,9 @@ export default function ManageGalleryPage() {
       .then((data) => {
         if (data?.stats && typeof data.stats === "object") {
           const next: Record<string, ImageMeta> = {};
-          for (const [id, s] of Object.entries(data.stats as Record<string, { metadata?: Record<string, string> }>)) {
+          for (const [id, s] of Object.entries(
+            data.stats as Record<string, { metadata?: Record<string, string> }>,
+          )) {
             next[id] = s.metadata ?? {};
           }
           setMetadata(next);
@@ -108,7 +123,7 @@ export default function ManageGalleryPage() {
     setEditForm(
       Object.entries(m).length > 0
         ? Object.entries(m).map(([key, value]) => ({ key, value }))
-        : [{ key: "", value: "" }]
+        : [{ key: "", value: "" }],
     );
     setEditingId(rid);
     setEditingImage({ fullPath: img.fullPath, name: img.name });
@@ -121,11 +136,15 @@ export default function ManageGalleryPage() {
   }
 
   function setEditRow(i: number, field: "key" | "value", val: string) {
-    setEditForm((p) => p.map((row, j) => (j === i ? { ...row, [field]: val } : row)));
+    setEditForm((p) =>
+      p.map((row, j) => (j === i ? { ...row, [field]: val } : row)),
+    );
   }
 
   function removeEditRow(i: number) {
-    setEditForm((p) => (p.length <= 1 ? [{ key: "", value: "" }] : p.filter((_, j) => j !== i)));
+    setEditForm((p) =>
+      p.length <= 1 ? [{ key: "", value: "" }] : p.filter((_, j) => j !== i),
+    );
   }
 
   async function handleSaveMetadata(e: React.FormEvent) {
@@ -154,7 +173,10 @@ export default function ManageGalleryPage() {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ fromPath: editingImage.fullPath, toName: newName }),
+          body: JSON.stringify({
+            fromPath: editingImage.fullPath,
+            toName: newName,
+          }),
         });
         const renameData = await renameRes.json();
         if (!renameRes.ok) throw new Error(renameData.error ?? "Rename failed");
@@ -262,7 +284,11 @@ export default function ManageGalleryPage() {
       const errs = data.errors?.length ?? 0;
       setUploadMessage({
         ok: errs === 0,
-        text: uploaded ? `Uploaded ${uploaded} file(s).${errs ? ` ${errs} failed.` : ""}` : errs ? "Upload failed." : "Done.",
+        text: uploaded
+          ? `Uploaded ${uploaded} file(s).${errs ? ` ${errs} failed.` : ""}`
+          : errs
+            ? "Upload failed."
+            : "Done.",
       });
       setPendingFiles([]);
       setFileInputKey((k) => k + 1);
@@ -281,7 +307,12 @@ export default function ManageGalleryPage() {
   }
 
   async function handleDeleteGallery() {
-    if (!confirm(`Delete the gallery "${folder}" and all ${images.length} image(s)? This cannot be undone.`)) return;
+    if (
+      !confirm(
+        `Delete the gallery "${folder}" and all ${images.length} image(s)? This cannot be undone.`,
+      )
+    )
+      return;
     const user = auth.currentUser;
     if (!user) return;
     setDeleteGalleryError(null);
@@ -310,7 +341,10 @@ export default function ManageGalleryPage() {
     return (
       <div>
         <p className="text-muted lowercase">Invalid gallery.</p>
-        <Link href="/admin/dashboard" className="text-sm text-foreground underline mt-2 inline-block">
+        <Link
+          href="/admin/dashboard"
+          className="text-sm text-foreground underline mt-2 inline-block"
+        >
           ← back to dashboard
         </Link>
       </div>
@@ -320,7 +354,10 @@ export default function ManageGalleryPage() {
   return (
     <div className="max-w-4xl space-y-10">
       <div>
-        <Link href="/admin/dashboard" className="text-sm text-muted hover:text-foreground lowercase mb-2 inline-block">
+        <Link
+          href="/admin/dashboard"
+          className="text-sm text-muted hover:text-foreground lowercase mb-2 inline-block"
+        >
           ← dashboard
         </Link>
         <h1 className="text-xl font-medium lowercase text-foreground">
@@ -332,7 +369,10 @@ export default function ManageGalleryPage() {
         <h2 className="text-sm font-medium lowercase text-foreground mb-3">
           rename gallery
         </h2>
-        <form onSubmit={handleRename} className="flex flex-wrap items-center gap-2">
+        <form
+          onSubmit={handleRename}
+          className="flex flex-wrap items-center gap-2"
+        >
           <input
             type="text"
             value={renameValue}
@@ -342,14 +382,18 @@ export default function ManageGalleryPage() {
           />
           <button
             type="submit"
-            disabled={renaming || renameValue.trim() === folder || !renameValue.trim()}
+            disabled={
+              renaming || renameValue.trim() === folder || !renameValue.trim()
+            }
             className="px-4 py-2 rounded-md bg-foreground text-background text-sm lowercase disabled:opacity-50 cursor-pointer"
           >
             {renaming ? "renaming…" : "rename"}
           </button>
         </form>
         {renameError && (
-          <p className="text-sm text-red-600 dark:text-red-400 mt-1 lowercase">{renameError}</p>
+          <p className="text-sm text-red-600 dark:text-red-400 mt-1 lowercase">
+            {renameError}
+          </p>
         )}
       </section>
 
@@ -369,7 +413,9 @@ export default function ManageGalleryPage() {
           {deletingGallery ? "deleting…" : "delete gallery"}
         </button>
         {deleteGalleryError && (
-          <p className="text-sm text-red-600 dark:text-red-400 mt-1 lowercase">{deleteGalleryError}</p>
+          <p className="text-sm text-red-600 dark:text-red-400 mt-1 lowercase">
+            {deleteGalleryError}
+          </p>
         )}
       </section>
 
@@ -402,12 +448,19 @@ export default function ManageGalleryPage() {
                 <li key={id} className="relative flex flex-col w-20">
                   <div className="aspect-square rounded overflow-hidden bg-surface border border-border">
                     {previewUrls[i] ? (
-                      <img src={previewUrls[i]} alt="" className="w-full h-full object-cover" />
+                      <img
+                        src={previewUrls[i]}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <div className="w-full h-full bg-muted/30 animate-pulse" />
                     )}
                   </div>
-                  <p className="text-[10px] text-muted truncate mt-0.5 lowercase" title={file.name}>
+                  <p
+                    className="text-[10px] text-muted truncate mt-0.5 lowercase"
+                    title={file.name}
+                  >
                     {file.name}
                   </p>
                   <button
@@ -431,7 +484,9 @@ export default function ManageGalleryPage() {
           </button>
         </form>
         {uploadMessage && (
-          <p className={`text-sm lowercase ${uploadMessage.ok ? "text-foreground" : "text-red-600 dark:text-red-400"}`}>
+          <p
+            className={`text-sm lowercase ${uploadMessage.ok ? "text-foreground" : "text-red-600 dark:text-red-400"}`}
+          >
             {uploadMessage.text}
           </p>
         )}
@@ -442,12 +497,17 @@ export default function ManageGalleryPage() {
           images ({images.length})
         </h2>
         <p className="text-xs text-muted mb-2">
-          Edit metadata (key/value). Use keys like <code className="text-[10px]">alt</code>, <code className="text-[10px]">caption</code>, <code className="text-[10px]">title</code> for gallery/lightbox.
+          Edit metadata (key/value). Use keys like{" "}
+          <code className="text-[10px]">alt</code>,{" "}
+          <code className="text-[10px]">caption</code>,{" "}
+          <code className="text-[10px]">title</code> for gallery/lightbox.
         </p>
         {imagesLoading ? (
           <p className="text-sm text-muted lowercase">loading…</p>
         ) : images.length === 0 ? (
-          <p className="text-sm text-muted lowercase">No images in this gallery.</p>
+          <p className="text-sm text-muted lowercase">
+            No images in this gallery.
+          </p>
         ) : (
           <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {images.map((img) => (
@@ -461,7 +521,10 @@ export default function ManageGalleryPage() {
                     sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
                   />
                 </div>
-                <p className="text-xs text-muted truncate mt-1 lowercase" title={img.name}>
+                <p
+                  className="text-xs text-muted truncate mt-1 lowercase"
+                  title={img.name}
+                >
                   {img.name}
                 </p>
                 <div className="absolute top-1 left-1 right-1 flex gap-1">
@@ -490,7 +553,9 @@ export default function ManageGalleryPage() {
       {editingId && editingImage && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/80 p-4"
-          onClick={() => !savingMeta && (setEditingId(null), setEditingImage(null))}
+          onClick={() =>
+            !savingMeta && (setEditingId(null), setEditingImage(null))
+          }
           role="dialog"
           aria-modal="true"
           aria-label="Edit image metadata"
@@ -520,14 +585,14 @@ export default function ManageGalleryPage() {
                       type="text"
                       value={row.key}
                       onChange={(e) => setEditRow(i, "key", e.target.value)}
-                      className="flex-1 min-w-0 px-2 py-1.5 rounded border border-border bg-background text-foreground text-sm lowercase"
+                      className="flex-1 min-w-0 px-2 py-1.5 rounded border border-border bg-background text-foreground text-sm"
                       placeholder="key"
                     />
                     <input
                       type="text"
                       value={row.value}
                       onChange={(e) => setEditRow(i, "value", e.target.value)}
-                      className="flex-1 min-w-0 px-2 py-1.5 rounded border border-border bg-background text-foreground text-sm lowercase"
+                      className="flex-1 min-w-0 px-2 py-1.5 rounded border border-border bg-background text-foreground text-sm"
                       placeholder="value"
                     />
                     <button
@@ -549,7 +614,9 @@ export default function ManageGalleryPage() {
                 + add key/value
               </button>
               {metaError && (
-                <p className="text-sm text-red-600 dark:text-red-400 lowercase">{metaError}</p>
+                <p className="text-sm text-red-600 dark:text-red-400 lowercase">
+                  {metaError}
+                </p>
               )}
               <div className="flex gap-2 mt-2">
                 <button
@@ -561,7 +628,9 @@ export default function ManageGalleryPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => !savingMeta && (setEditingId(null), setEditingImage(null))}
+                  onClick={() =>
+                    !savingMeta && (setEditingId(null), setEditingImage(null))
+                  }
                   className="px-4 py-2 rounded border border-border text-foreground text-sm lowercase cursor-pointer"
                 >
                   cancel
