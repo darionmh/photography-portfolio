@@ -6,6 +6,7 @@ import "./globals.css";
 import ThemeScript from "./components/ThemeScript";
 import ConditionalLayout from "./components/ConditionalLayout";
 import { GalleriesProvider } from "./contexts/GalleriesContext";
+import { CartProvider } from "./contexts/CartContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -106,7 +107,9 @@ export default function RootLayout({
           Skip to main content
         </a>
         <GalleriesProvider>
-          <ConditionalLayout>{children}</ConditionalLayout>
+          <CartProvider>
+            <ConditionalLayout>{children}</ConditionalLayout>
+          </CartProvider>
         </GalleriesProvider>
         <Analytics />
         <SpeedInsights />

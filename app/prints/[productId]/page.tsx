@@ -196,6 +196,7 @@ export default async function PrintDetailPage({
       </Link>
 
       <PrintDetailClient
+        productId={productId}
         title={title}
         caption={caption}
         alt={alt}

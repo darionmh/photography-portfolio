@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import GalleryImage from "@/app/components/GalleryImage";
+import { useCart } from "@/app/contexts/CartContext";
+import Link from "next/link";
 
 export interface PrintfulVariant {
   id: number;
@@ -13,31 +15,35 @@ export interface PrintfulVariant {
 }
 
 interface Props {
+  productId: string;
   title: string;
   caption: string | null;
+  productDescription: string | null;
   alt: string;
   originalPhotoUrl: string;
   originalWidth: number;
   originalHeight: number;
   productThumbnailUrl: string | null;
-  productDescription: string | null;
   variants: PrintfulVariant[];
   resourceId: string;
 }
 
 export default function PrintDetailClient({
+  productId,
   title,
   caption,
+  productDescription,
   alt,
   originalPhotoUrl,
   originalWidth,
   originalHeight,
   productThumbnailUrl,
-  productDescription,
   variants,
   resourceId,
 }: Props) {
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const [added, setAdded] = useState(false);
+  const { addItem } = useCart();
 
   const selected = variants[selectedIdx] ?? null;
 
@@ -56,6 +62,22 @@ export default function PrintDetailClient({
 
   const cappedWidth = Math.min(originalWidth, 900);
   const cappedHeight = Math.round(cappedWidth * (originalHeight / originalWidth));
+
+  function handleAddToCart() {
+    if (!selected) return;
+    addItem({
+      productId,
+      variantId: selected.id,
+      size: selected.size,
+      title,
+      retailPrice: selected.retailPrice,
+      currency: selected.currency,
+      resourceId,
+      imageUrl,
+    });
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  }
 
   return (
     <div className="grid md:grid-cols-2 gap-8 lg:gap-16 items-start">
@@ -144,18 +166,24 @@ export default function PrintDetailClient({
           <p className="text-foreground text-lg font-medium">{price}</p>
         )}
 
-        <form action="/api/checkout" method="POST">
-          <input type="hidden" name="resourceId" value={resourceId} />
-          {selected && (
-            <input type="hidden" name="variantId" value={selected.id} />
-          )}
+        <div className="flex items-center gap-4">
           <button
-            type="submit"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-foreground text-background text-sm font-medium lowercase hover:opacity-80 transition-opacity cursor-pointer"
+            type="button"
+            onClick={handleAddToCart}
+            disabled={!selected}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-foreground text-background text-sm font-medium lowercase hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-40"
           >
-            buy print
+            {added ? "added to cart" : "add to cart"}
           </button>
-        </form>
+          {added && (
+            <Link
+              href="/cart"
+              className="text-sm text-muted hover:text-foreground underline underline-offset-2 lowercase transition-colors"
+            >
+              view cart
+            </Link>
+          )}
+        </div>
 
         {productDescription && (
           <p className="text-xs text-muted leading-relaxed">{productDescription}</p>

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { track } from "@vercel/analytics";
 import { useGalleries } from "../contexts/GalleriesContext";
+import { useCart } from "../contexts/CartContext";
 import { formatGalleryName, pathForGallery, HOME_PAGE } from "../lib/galleries";
 
 export default function Header() {
@@ -14,13 +15,17 @@ export default function Header() {
   const currentPage = pathname === "/" ? HOME_PAGE : pathname.slice(1);
   const pageLabel = formatGalleryName(currentPage.split("/")[0]);
   const { galleries, galleriesLoading } = useGalleries();
+  const { totalItems } = useCart();
   const [galleriesOpen, setGalleriesOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!galleriesOpen) return;
     const handleClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setGalleriesOpen(false);
       }
     };
@@ -44,21 +49,32 @@ export default function Header() {
               the places we went
             </h1>
             {currentPage !== HOME_PAGE && (
-              <span className="hidden lg:inline text-sm text-muted/90 tracking-wide truncate lowercase" aria-label={`Viewing gallery: ${formatGalleryName(currentPage)}`}>
+              <span
+                className="hidden lg:inline text-sm text-muted/90 tracking-wide truncate lowercase"
+                aria-label={`Viewing gallery: ${formatGalleryName(currentPage)}`}
+              >
                 / {pageLabel}
               </span>
             )}
           </div>
-          <span className="text-xs text-muted tracking-wide">photography by darion</span>
+          <span className="text-xs text-muted tracking-wide">
+            photography by darion
+          </span>
           {currentPage !== HOME_PAGE && (
-            <span className="lg:hidden text-xs text-muted/90 tracking-wide truncate lowercase" aria-label={`Viewing gallery: ${formatGalleryName(currentPage)}`}>
+            <span
+              className="lg:hidden text-xs text-muted/90 tracking-wide truncate lowercase"
+              aria-label={`Viewing gallery: ${formatGalleryName(currentPage)}`}
+            >
               / {pageLabel}
             </span>
           )}
         </div>
         {/* Right group: Home + Galleries (small viewports) + Instagram */}
         <div className="flex items-center gap-5 sm:gap-6 lowercase shrink-0">
-          <div className="flex items-center gap-5 sm:gap-6 lg:hidden" ref={dropdownRef}>
+          <div
+            className="flex items-center gap-5 sm:gap-6 lg:hidden"
+            ref={dropdownRef}
+          >
             <Link
               href="/"
               className="text-sm tracking-wide text-muted hover:text-foreground underline-offset-4 hover:underline transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-offset-2 rounded-sm cursor-pointer lowercase"
@@ -96,7 +112,9 @@ export default function Header() {
                   className="absolute right-0 top-full mt-2 py-2 min-w-[12rem] rounded-xl border border-border/80 bg-background shadow-[0_4px_24px_-4px_rgba(0,0,0,0.08),0_8px_16px_-8px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.25)] z-30 max-h-[70vh] overflow-y-auto"
                 >
                   {galleriesLoading && galleries.length === 0 ? (
-                    <span className="block px-4 py-2.5 text-sm text-muted/90 tracking-wide">Loading…</span>
+                    <span className="block px-4 py-2.5 text-sm text-muted/90 tracking-wide">
+                      Loading…
+                    </span>
                   ) : (
                     galleries.map((name) => {
                       const isActive = currentPage === name;
@@ -122,11 +140,37 @@ export default function Header() {
               )}
             </div>
           </div>
+          <Link
+            href="/cart"
+            className="text-muted hover:text-foreground transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-offset-2 shrink-0 p-1 rounded-sm cursor-pointer"
+            aria-label={`Cart${totalItems > 0 ? ` (${totalItems} item${totalItems === 1 ? "" : "s"})` : ""}`}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <circle cx="8" cy="21" r="1" />
+              <circle cx="19" cy="21" r="1" />
+              <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+            </svg>
+          </Link>
           <a
             href={instagramUrl}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => requestAnimationFrame(() => track("instagram_clicked", { location: "header" }))}
+            onClick={() =>
+              requestAnimationFrame(() =>
+                track("instagram_clicked", { location: "header" }),
+              )
+            }
             className="text-muted hover:text-foreground transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-muted focus-visible:ring-offset-2 shrink-0 p-1 rounded-sm cursor-pointer"
             aria-label="Instagram"
           >
