@@ -587,6 +587,16 @@ export default function Home() {
                 here. The places we went, and what stuck.
               </p>
               <p className="text-sm text-foreground mt-4">
+                Some of these are{" "}
+                <a
+                  href="/?forsale=1"
+                  className="font-medium text-foreground hover:text-muted underline-offset-4 hover:underline transition-colors"
+                >
+                  available as prints
+                </a>
+                {" "}— pick one for your wall.
+              </p>
+              <p className="text-sm text-foreground mt-4">
                 Follow for more, or reach out{" "}
                 <a
                   href={instagramUrl}
@@ -1033,7 +1043,7 @@ export default function Home() {
                     view listing
                   </a>
                 )}
-                </>
+</>
               );
             })()}
           </div>

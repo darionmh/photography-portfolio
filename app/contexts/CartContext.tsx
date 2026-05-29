@@ -22,6 +22,7 @@ export interface CartItem {
 
 interface CartContextType {
   items: CartItem[];
+  hydrated: boolean;
   addItem: (item: Omit<CartItem, "quantity">) => void;
   removeItem: (productId: string, variantId: number) => void;
   updateQuantity: (productId: string, variantId: number, qty: number) => void;
@@ -101,7 +102,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <CartContext.Provider
-      value={{ items, addItem, removeItem, updateQuantity, clearCart, totalItems }}
+      value={{ items, hydrated, addItem, removeItem, updateQuantity, clearCart, totalItems }}
     >
       {children}
     </CartContext.Provider>
