@@ -81,6 +81,8 @@ function formatUploadFilename(originalName: string, width: string | undefined, h
   return `${safe(originalName)}`.replace(/\s+/g, "_") || `image.${ext}`;
 }
 
+export const maxDuration = 60;
+
 /** POST /api/admin/upload — upload one or more images to a gallery folder. Requires admin auth. */
 export async function POST(request: Request) {
   try {
@@ -123,6 +125,7 @@ export async function POST(request: Request) {
         const ref = bucket.file(storagePath);
         await ref.save(buffer, {
           contentType,
+          resumable: true,
           metadata: { cacheControl: "public, max-age=31536000" },
         });
         uploaded.push({ name: file.name, path: storagePath });

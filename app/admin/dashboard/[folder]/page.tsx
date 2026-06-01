@@ -266,22 +266,29 @@ export default function ManageGalleryPage() {
     if (!user || pendingFiles.length === 0) return;
     setUploading(true);
     setUploadMessage(null);
+    const total = pendingFiles.length;
+    let uploaded = 0;
+    let errs = 0;
     try {
       const token = await user.getIdToken();
-      const formData = new FormData();
-      formData.set("folder", folder);
-      for (const { file } of pendingFiles) {
-        formData.append("files", file);
+      for (let i = 0; i < pendingFiles.length; i++) {
+        setUploadMessage({ ok: true, text: `Uploading ${i + 1} of ${total}…` });
+        const formData = new FormData();
+        formData.set("folder", folder);
+        formData.append("files", pendingFiles[i].file);
+        const res = await fetch("/api/admin/upload", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errs += 1;
+        } else {
+          uploaded += data.uploaded?.length ?? 0;
+          errs += data.errors?.length ?? 0;
+        }
       }
-      const res = await fetch("/api/admin/upload", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Upload failed");
-      const uploaded = data.uploaded?.length ?? 0;
-      const errs = data.errors?.length ?? 0;
       setUploadMessage({
         ok: errs === 0,
         text: uploaded
