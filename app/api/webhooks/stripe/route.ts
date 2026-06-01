@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/app/lib/stripe";
 import { getPendingOrder, fulfillOrder } from "@/app/lib/orders";
-import { confirmPrintfulOrder } from "@/app/lib/printful";
+import { confirmPrintfulOrder, updatePrintfulRecipientEmail } from "@/app/lib/printful";
 
 // Disable body parsing so we can read the raw bytes for signature verification.
 export const config = { api: { bodyParser: false } };
@@ -52,6 +52,10 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      const email: string | null | undefined = session.customer_details?.email;
+      if (email) {
+        await updatePrintfulRecipientEmail(order.printfulDraftOrderId, email);
+      }
       await confirmPrintfulOrder(order.printfulDraftOrderId);
       await fulfillOrder(session.id);
     } catch (err) {

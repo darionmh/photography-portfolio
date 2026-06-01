@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getFirestore, IMAGE_STATS_COLLECTION } from "@/app/lib/firebase-admin";
 import { getStripe } from "@/app/lib/stripe";
 import { createPendingOrder, type PendingCartItem } from "@/app/lib/orders";
-import { createDraftPrintfulOrder, type PrintfulRecipient } from "@/app/lib/printful";
+import {
+  createDraftPrintfulOrder,
+  fetchShippingRates,
+  isTestMode,
+  type PrintfulRecipient,
+} from "@/app/lib/printful";
 import type Stripe from "stripe";
 
 async function getPrintfulVariantPriceCents(
@@ -48,11 +53,17 @@ interface CartItemInput {
   imageUrl?: string | null;
 }
 
+interface ShippingRateInput {
+  id: string;
+  name: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const rawItems: CartItemInput[] = Array.isArray(body?.items) ? body.items : [];
     const addr: ShippingAddress | undefined = body?.shippingAddress;
+    const shippingRate: ShippingRateInput | undefined = body?.shippingRate;
 
     if (rawItems.length === 0) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
@@ -62,10 +73,13 @@ export async function POST(request: NextRequest) {
       !addr?.name?.trim() ||
       !addr?.address1?.trim() ||
       !addr?.city?.trim() ||
-      !addr?.country?.trim() ||
-      !addr?.zip?.trim()
+      !addr?.country?.trim()
     ) {
       return NextResponse.json({ error: "Shipping address is incomplete" }, { status: 400 });
+    }
+
+    if (!shippingRate?.id) {
+      return NextResponse.json({ error: "A shipping method is required" }, { status: 400 });
     }
 
     const db = getFirestore();
@@ -129,9 +143,64 @@ export async function POST(request: NextRequest) {
       zip: addr.zip.trim(),
     };
 
+    // Verify the selected shipping rate server-side and derive the authoritative cost.
+    // In test mode we skip this to avoid hitting real Printful with test data.
+    let shippingRateCents = 0;
+    let shippingRateName = shippingRate.id;
+    if (!isTestMode()) {
+      let serverRates;
+      try {
+        serverRates = await fetchShippingRates(
+          recipient.country_code,
+          recipient.state_code ?? "",
+          recipient.zip,
+          pendingItems.map((i) => ({ syncVariantId: i.variantId, quantity: i.quantity })),
+        );
+      } catch (err) {
+        console.error("[checkout] Shipping rate verification failed:", err);
+        return NextResponse.json(
+          { error: "Unable to verify shipping rates. Please try again." },
+          { status: 500 },
+        );
+      }
+
+      const matchedRate = serverRates.find((r) => r.id === shippingRate.id);
+      if (!matchedRate) {
+        return NextResponse.json(
+          { error: "Selected shipping method is not available for your address. Please go back and choose another." },
+          { status: 400 },
+        );
+      }
+
+      // US cheapest rate ships free
+      let isFree = false;
+      if (recipient.country_code === "US" && serverRates.length > 0) {
+        const cheapest = serverRates.reduce(
+          (min, r) => parseFloat(r.rate) < parseFloat(min.rate) ? r : min,
+          serverRates[0],
+        );
+        isFree = matchedRate.id === cheapest.id;
+      }
+
+      shippingRateCents = isFree ? 0 : Math.round(parseFloat(matchedRate.rate) * 100);
+      shippingRateName = matchedRate.name;
+    }
+
+    if (shippingRateCents > 0) {
+      lineItems.push({
+        price_data: {
+          currency: "usd",
+          product_data: { name: `Shipping — ${shippingRateName}` },
+          unit_amount: shippingRateCents,
+        },
+        quantity: 1,
+      });
+    }
+
     const printfulDraft = await createDraftPrintfulOrder(
       recipient,
       pendingItems.map((i) => ({ sync_variant_id: i.variantId, quantity: i.quantity })),
+      shippingRate.id,
     );
 
     const siteUrl = (
