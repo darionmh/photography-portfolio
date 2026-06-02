@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import Script from "next/script";
 import "./globals.css";
+
+const GA_ID = "G-KQXE4LE62B";
 import ThemeScript from "./components/ThemeScript";
 import ConditionalLayout from "./components/ConditionalLayout";
 import { GalleriesProvider } from "./contexts/GalleriesContext";
@@ -113,6 +116,13 @@ export default function RootLayout({
         </GalleriesProvider>
         <Analytics />
         <SpeedInsights />
+        <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
+        <Script id="google-analytics" strategy="afterInteractive">{`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', '${GA_ID}');
+        `}</Script>
       </body>
     </html>
   );
