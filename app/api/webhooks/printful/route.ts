@@ -42,8 +42,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
-  // const order = await getOrderByPrintfulId(printfulOrderId);
-  const order = { customerEmail: "darionmh@gmail.com" };
+  const order = await getOrderByPrintfulId(printfulOrderId);
   if (!order?.customerEmail) {
     console.warn(
       "[printful webhook] No customer email found for Printful order",
