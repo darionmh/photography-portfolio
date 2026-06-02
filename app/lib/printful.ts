@@ -206,14 +206,18 @@ export async function confirmPrintfulOrder(
     },
   );
 
+  const data = await res.json();
+
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(
-      `Printful order confirmation failed (${res.status}): ${err?.error?.message ?? res.statusText}`,
-    );
+    const message: string = data?.error?.message ?? res.statusText;
+    // Treat already-confirmed orders as success so webhook retries don't get stuck
+    if (res.status === 400 && /no longer editable|already (been )?confirm/i.test(message)) {
+      console.warn(`[printful] Order ${orderId} already confirmed, treating as success`);
+      return {};
+    }
+    throw new Error(`Printful order confirmation failed (${res.status}): ${message}`);
   }
 
-  const data = await res.json();
   return {
     estimatedShipDate: data?.result?.estimated_ship_date ?? undefined,
   };
