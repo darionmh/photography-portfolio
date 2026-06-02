@@ -73,6 +73,12 @@ export default function AdminLayoutClient({
           >
             analytics
           </Link>
+          <Link
+            href="/admin/webhooks"
+            className="text-muted hover:text-foreground"
+          >
+            webhooks
+          </Link>
           <Link href="/" className="text-muted hover:text-foreground">
             view site
           </Link>

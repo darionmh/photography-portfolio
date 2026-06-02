@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/app/lib/stripe";
 import { getPendingOrder, fulfillOrder } from "@/app/lib/orders";
 import { confirmPrintfulOrder, updatePrintfulRecipientEmail } from "@/app/lib/printful";
+import { sendOrderConfirmed } from "@/app/lib/email";
 
 // Disable body parsing so we can read the raw bytes for signature verification.
 export const config = { api: { bodyParser: false } };
@@ -57,7 +58,11 @@ export async function POST(request: NextRequest) {
         await updatePrintfulRecipientEmail(order.printfulDraftOrderId, email);
       }
       await confirmPrintfulOrder(order.printfulDraftOrderId);
-      await fulfillOrder(session.id);
+      await fulfillOrder(session.id, email ?? undefined);
+      if (email) {
+        sendOrderConfirmed({ to: email, orderId: session.id, items: order.items })
+          .catch((err) => console.error("[email] Failed to send order confirmation:", err));
+      }
     } catch (err) {
       console.error("Failed to confirm Printful order for session", session.id, err);
       // Return 500 so Stripe retries the webhook
