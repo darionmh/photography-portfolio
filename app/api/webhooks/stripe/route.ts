@@ -60,8 +60,11 @@ export async function POST(request: NextRequest) {
       const { estimatedShipDate } = await confirmPrintfulOrder(order.printfulDraftOrderId);
       await fulfillOrder(session.id, email ?? undefined);
       if (email) {
-        sendOrderConfirmed({ to: email, orderId: session.id, items: order.items, estimatedShipDate })
-          .catch((err) => console.error("[email] Failed to send order confirmation:", err));
+        try {
+          await sendOrderConfirmed({ to: email, orderId: session.id, items: order.items, estimatedShipDate });
+        } catch (err) {
+          console.error("[email] Failed to send order confirmation:", err);
+        }
       }
     } catch (err) {
       console.error("Failed to confirm Printful order for session", session.id, err);

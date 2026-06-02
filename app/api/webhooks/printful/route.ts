@@ -51,16 +51,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
-  sendOrderShipped({
-    to: order.customerEmail,
-    carrier: shipment.carrier ?? "Carrier",
-    trackingNumber: shipment.tracking_number,
-    trackingUrl:
-      shipment.tracking_url ??
-      `https://www.google.com/search?q=${encodeURIComponent(shipment.tracking_number)}`,
-  }).catch((err) =>
-    console.error("[email] Failed to send shipping notification:", err),
-  );
+  try {
+    await sendOrderShipped({
+      to: order.customerEmail,
+      carrier: shipment.carrier ?? "Carrier",
+      trackingNumber: shipment.tracking_number,
+      trackingUrl:
+        shipment.tracking_url ??
+        `https://www.google.com/search?q=${encodeURIComponent(shipment.tracking_number)}`,
+    });
+  } catch (err) {
+    console.error("[email] Failed to send shipping notification:", err);
+  }
 
   return NextResponse.json({ received: true });
 }
