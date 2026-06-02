@@ -57,10 +57,10 @@ export async function POST(request: NextRequest) {
       if (email) {
         await updatePrintfulRecipientEmail(order.printfulDraftOrderId, email);
       }
-      await confirmPrintfulOrder(order.printfulDraftOrderId);
+      const { estimatedShipDate } = await confirmPrintfulOrder(order.printfulDraftOrderId);
       await fulfillOrder(session.id, email ?? undefined);
       if (email) {
-        sendOrderConfirmed({ to: email, orderId: session.id, items: order.items })
+        sendOrderConfirmed({ to: email, orderId: session.id, items: order.items, estimatedShipDate })
           .catch((err) => console.error("[email] Failed to send order confirmation:", err));
       }
     } catch (err) {

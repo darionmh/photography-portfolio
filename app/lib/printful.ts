@@ -184,13 +184,15 @@ export async function createDraftPrintfulOrder(
   return { id: data.result.id, status: data.result.status };
 }
 
-export async function confirmPrintfulOrder(orderId: number): Promise<void> {
+export async function confirmPrintfulOrder(
+  orderId: number,
+): Promise<{ estimatedShipDate?: string }> {
   if (isTestMode()) {
     console.log(
       "[TEST MODE] Skipping Printful order confirmation for draft:",
       orderId,
     );
-    return;
+    return {};
   }
 
   const res = await fetch(
@@ -210,4 +212,9 @@ export async function confirmPrintfulOrder(orderId: number): Promise<void> {
       `Printful order confirmation failed (${res.status}): ${err?.error?.message ?? res.statusText}`,
     );
   }
+
+  const data = await res.json();
+  return {
+    estimatedShipDate: data?.result?.estimated_ship_date ?? undefined,
+  };
 }
